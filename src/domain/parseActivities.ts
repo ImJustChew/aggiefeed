@@ -1,0 +1,76 @@
+import type { ApiActivity } from '@/api/types';
+
+import type { Activity, ActivityEvent } from './activity';
+import { parseDate } from './date';
+import { cleanText, htmlToPlainText } from './text';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function nonBlankString(value: unknown): string | null {
+  const string = stringValue(value);
+  return string !== null && string.trim().length > 0 ? string : null;
+}
+
+function cleanLocation(value: string | null): string | null {
+  if (value === null) return null;
+
+  const parts = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
+function toEvent(object: Record<string, unknown>): ActivityEvent | null {
+  const model = isRecord(object.ucdEdusModel) ? object.ucdEdusModel : null;
+  const event = model !== null && isRecord(model.event) ? model.event : null;
+  if (event === null) return null;
+
+  return {
+    start: parseDate(event.startDate),
+    end: parseDate(event.endDate),
+    location: cleanLocation(stringValue(event.location)),
+    isAllDay: event.isAllDay === true || event.hasStartTime === false,
+  };
+}
+
+function toActivity(raw: ApiActivity, index: number): Activity {
+  const actor = isRecord(raw.actor) ? raw.actor : null;
+  const object = isRecord(raw.object) ? raw.object : null;
+  const model = object !== null && isRecord(object.ucdEdusModel) ? object.ucdEdusModel : null;
+
+  return {
+    id: nonBlankString(raw.id) ?? nonBlankString(raw._id) ?? `activity-${index}`,
+    title: cleanText(stringValue(raw.title)),
+    source: cleanText(actor === null ? null : stringValue(actor.displayName)),
+    objectType: cleanText(object === null ? null : stringValue(object.objectType)),
+    published: parseDate(raw.published),
+    summary: htmlToPlainText(object === null ? null : stringValue(object.content)),
+    url: nonBlankString(model === null ? null : model.url),
+    event: object === null ? null : toEvent(object),
+  };
+}
+
+export class InvalidFeedError extends Error {
+  constructor() {
+    super('The feed response was not in the expected format.');
+    this.name = 'InvalidFeedError';
+  }
+}
+
+/** Validates the top-level response and maps only object entries. */
+export function parseActivities(payload: unknown): Activity[] {
+  if (!Array.isArray(payload)) throw new InvalidFeedError();
+
+  return payload.flatMap((item: unknown, index) => {
+    if (!isRecord(item)) return [];
+    return [toActivity(item as ApiActivity, index)];
+  });
+}
