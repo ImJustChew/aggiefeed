@@ -53,6 +53,7 @@ export function formatDateRange(start: Date, end: Date): string {
 
 export function formatRelative(date: Date, now: Date): string {
   const elapsed = now.getTime() - date.getTime();
+  if (elapsed < 0) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (elapsed < MINUTE) return 'Just now';
   if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`;
   if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`;

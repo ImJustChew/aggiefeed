@@ -47,5 +47,6 @@ describe('date helpers', () => {
     expect(formatRelative(new Date('2026-09-25T10:00:00Z'), now)).toBe('2h ago');
     expect(formatRelative(new Date('2026-09-23T12:00:00Z'), now)).toBe('2d ago');
     expect(formatRelative(new Date('2026-09-17T12:00:00Z'), now)).toBe('Sep 17');
+    expect(formatRelative(new Date('2026-09-26T12:00:00Z'), now)).toBe('Sep 26');
   });
 });
