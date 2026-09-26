@@ -68,10 +68,9 @@ function activitiesQueryKey(query: string): ActivitiesQueryKey {
   return ['activities', { query }];
 }
 
-function activitiesQueryOptions(query: string, enabled = true) {
+function activitiesQueryOptions(query: string) {
   return infiniteQueryOptions({
     queryKey: activitiesQueryKey(query),
-    enabled,
     queryFn: ({ pageParam, signal }) =>
       fetchActivities({
         skip: pageParam,
@@ -102,6 +101,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
     error,
     isPending,
     isFetching,
+    isPlaceholderData,
     isFetchingNextPage,
     isFetchNextPageError,
     hasNextPage,
@@ -117,6 +117,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
   );
   const hasMore = hasNextPage === true;
   const loadMoreError = isFetchNextPageError ? toErrorMessage(error) : null;
+  const isSearching = isFetching && isPlaceholderData;
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isFetchingNextPage) return;
@@ -203,6 +204,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
     hasMore,
     isLoadingMore: isFetchingNextPage,
     loadMoreError,
+    isSearching,
     isRefreshing,
     reload,
   };
@@ -231,10 +233,8 @@ export function useActivity(id: string) {
           const hasCachedData = cachedQueries.some(([, cached]) => cached !== undefined);
           if (!hasCachedData) return undefined;
 
-          return (
-            flattenActivities(cachedQueries.flatMap(([, cached]) => cached?.pages ?? [])).find(
-              (activity) => activity.id === id,
-            ) ?? null
+          return flattenActivities(cachedQueries.flatMap(([, cached]) => cached?.pages ?? [])).find(
+            (activity) => activity.id === id,
           );
         },
         staleTime: ACTIVITY_STALE_TIME,

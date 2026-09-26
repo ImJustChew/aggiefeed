@@ -66,7 +66,11 @@ describe('activity hooks', () => {
   });
 
   it('trims the query key and transitions from loading to ready', async () => {
-    mockedFetchActivities.mockResolvedValue([activity('one')]);
+    let resolveFeed: (activities: Activity[]) => void = () => undefined;
+    const feedPromise = new Promise<Activity[]>((resolve) => {
+      resolveFeed = resolve;
+    });
+    mockedFetchActivities.mockReturnValue(feedPromise);
 
     const { result } = await renderHook(() => useFeed({ query: ' tennis ', filter: 'all' }), {
       wrapper: wrapper(queryClient),
@@ -74,6 +78,10 @@ describe('activity hooks', () => {
 
     expect(result.current.state).toEqual({ status: 'loading' });
 
+    await act(async () => {
+      resolveFeed([activity('one')]);
+      await feedPromise;
+    });
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
     expect(result.current.state).toEqual({
       status: 'ready',
@@ -96,6 +104,7 @@ describe('activity hooks', () => {
     );
 
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    await waitFor(() => expect(result.current.isSearching).toBe(false));
 
     let resolveSearch: (activities: Activity[]) => void = () => undefined;
     const searchPromise = new Promise<Activity[]>((resolve) => {
@@ -110,6 +119,7 @@ describe('activity hooks', () => {
       activities: [previousActivity],
       fetchedAt: expect.any(Date),
     });
+    expect(result.current.isSearching).toBe(true);
     expect(mockedFetchActivities).toHaveBeenLastCalledWith(
       expect.objectContaining({ query: 'new search', skip: 0, limit: 25 }),
     );
@@ -119,6 +129,7 @@ describe('activity hooks', () => {
       await searchPromise;
     });
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    await waitFor(() => expect(result.current.isSearching).toBe(false));
   });
 
   it('distinguishes an empty feed from no results for a filter or search', async () => {
@@ -427,6 +438,24 @@ describe('activity hooks', () => {
 
     expect(result.current.state).toEqual({ status: 'ready', activity: searchActivity });
     expect(mockedFetchActivities).not.toHaveBeenCalled();
+  });
+
+  it('fetches the default page when cached queries do not contain the requested id', async () => {
+    const cachedActivity = activity('cached-result');
+    const fetchedActivity = activity('fetched-result');
+    setActivities(queryClient, '', [[cachedActivity]]);
+    mockedFetchActivities.mockResolvedValueOnce([fetchedActivity]);
+
+    const { result } = await renderHook(() => useActivity('fetched-result'), {
+      wrapper: wrapper(queryClient),
+    });
+
+    await waitFor(() =>
+      expect(result.current.state).toEqual({ status: 'ready', activity: fetchedActivity }),
+    );
+    expect(mockedFetchActivities).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, limit: 25, query: '' }),
+    );
   });
 
   it('fetches the default first page on a cold detail cache and reports unknown ids', async () => {
