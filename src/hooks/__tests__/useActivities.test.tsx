@@ -295,15 +295,32 @@ describe('activity hooks', () => {
 
   it('auto-fills sparse filters with a bounded number of page requests', async () => {
     const firstPage = [activity('event', 'event'), ...page(0, 24)];
-    mockedFetchActivities.mockImplementation(({ skip = 0 } = {}) =>
-      Promise.resolve(skip === 0 ? firstPage : page(skip)),
-    );
+    const pendingPages = new Map<number, (activities: Activity[]) => void>();
+    mockedFetchActivities.mockImplementation(({ skip = 0 } = {}) => {
+      return new Promise<Activity[]>((resolve) => {
+        pendingPages.set(skip, resolve);
+      });
+    });
 
     const { result } = await renderHook(() => useFeed({ filter: 'events' }), {
       wrapper: wrapper(queryClient),
     });
 
+    const resolvePage = async (skip: number, activities: Activity[]) => {
+      await waitFor(() => expect(pendingPages.has(skip)).toBe(true));
+      await act(async () => {
+        pendingPages.get(skip)?.(activities);
+        await Promise.resolve();
+      });
+    };
+
+    await waitFor(() => expect(mockedFetchActivities).toHaveBeenCalledTimes(1));
+    await resolvePage(0, firstPage);
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    await resolvePage(25, page(25));
+    await resolvePage(50, page(50));
+    await resolvePage(75, page(75));
+    await resolvePage(100, page(100));
     await waitFor(() => expect(mockedFetchActivities).toHaveBeenCalledTimes(5));
     expect(mockedFetchActivities.mock.calls.map(([request]) => request?.skip)).toEqual([
       0, 25, 50, 75, 100,
