@@ -48,7 +48,10 @@ describe('FeedScreen', () => {
 
   it('shows empty state with a refresh action', async () => {
     const onRefresh = jest.fn();
-    await renderFeed({ status: 'empty' }, onRefresh);
+    await renderFeed(
+      { status: 'empty', query: '', filter: 'all', reason: 'feed-empty' },
+      onRefresh,
+    );
     expect(screen.getByText('No stories yet')).toBeOnTheScreen();
 
     const user = userEvent.setup();

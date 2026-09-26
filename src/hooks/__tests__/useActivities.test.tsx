@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
 
 import { FeedRequestError, fetchActivities } from '@/api/aggieFeed';
@@ -20,12 +20,12 @@ jest.mock('@/api/aggieFeed', () => {
 
 const mockedFetchActivities = jest.mocked(fetchActivities);
 
-function activity(id: string): Activity {
+function activity(id: string, objectType = 'notification'): Activity {
   return {
     id,
     title: `Activity ${id}`,
     source: 'UC Davis',
-    objectType: 'notification',
+    objectType,
     published: new Date('2026-09-25T12:00:00Z'),
     summary: null,
     url: null,
@@ -33,10 +33,21 @@ function activity(id: string): Activity {
   };
 }
 
+function page(start: number, count = 25): Activity[] {
+  return Array.from({ length: count }, (_, index) => activity(`activity-${start + index}`));
+}
+
 function wrapper(queryClient: QueryClient) {
   return function QueryClientWrapper({ children }: PropsWithChildren) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
+}
+
+function setActivities(queryClient: QueryClient, query: string, pages: Activity[][]): void {
+  queryClient.setQueryData(['activities', { query }], {
+    pages,
+    pageParams: pages.map((_page, index) => index * 25),
+  });
 }
 
 describe('activity hooks', () => {
@@ -49,43 +60,72 @@ describe('activity hooks', () => {
   });
 
   afterEach(() => {
+    cleanup();
     queryClient.clear();
     mockedFetchActivities.mockReset();
   });
 
-  it('transitions from loading to ready with a fetch timestamp', async () => {
-    let resolveFeed: (activities: Activity[]) => void = () => undefined;
-    const feedPromise = new Promise<Activity[]>((resolve) => {
-      resolveFeed = resolve;
-    });
-    mockedFetchActivities.mockReturnValue(feedPromise);
+  it('trims the query key and transitions from loading to ready', async () => {
+    mockedFetchActivities.mockResolvedValue([activity('one')]);
 
-    const { result } = await renderHook(() => useFeed(), {
+    const { result } = await renderHook(() => useFeed({ query: ' tennis ', filter: 'all' }), {
       wrapper: wrapper(queryClient),
     });
 
     expect(result.current.state).toEqual({ status: 'loading' });
-    expect(result.current.isRefreshing).toBe(false);
 
-    await act(() => {
-      resolveFeed([activity('one')]);
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    expect(result.current.state).toEqual({
+      status: 'ready',
+      activities: [activity('one')],
+      fetchedAt: expect.any(Date),
+    });
+    expect(mockedFetchActivities).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, limit: 25, query: 'tennis' }),
+    );
+    expect(queryClient.getQueryData(['activities', { query: 'tennis' }])).toBeDefined();
+  });
+
+  it('distinguishes an empty feed from no results for a filter or search', async () => {
+    mockedFetchActivities.mockResolvedValueOnce([]);
+    const emptyFeed = await renderHook(() => useFeed(), { wrapper: wrapper(queryClient) });
+
+    await waitFor(() =>
+      expect(emptyFeed.result.current.state).toEqual({
+        status: 'empty',
+        query: '',
+        filter: 'all',
+        reason: 'feed-empty',
+      }),
+    );
+
+    mockedFetchActivities.mockResolvedValueOnce([activity('news')]);
+    const filteredFeed = await renderHook(() => useFeed({ query: 'tennis', filter: 'events' }), {
+      wrapper: wrapper(queryClient),
+    });
+
+    await waitFor(() =>
+      expect(filteredFeed.result.current.state).toEqual({
+        status: 'empty',
+        query: 'tennis',
+        filter: 'events',
+        reason: 'no-results',
+      }),
+    );
+  });
+
+  it('filters events client-side without changing the query key', async () => {
+    mockedFetchActivities.mockResolvedValue([activity('news'), activity('event', 'event')]);
+
+    const { result } = await renderHook(() => useFeed({ filter: 'events' }), {
+      wrapper: wrapper(queryClient),
     });
 
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
     if (result.current.state.status === 'ready') {
-      expect(result.current.state.activities).toEqual([activity('one')]);
-      expect(result.current.state.fetchedAt).toBeInstanceOf(Date);
+      expect(result.current.state.activities.map(({ id }) => id)).toEqual(['event']);
     }
-  });
-
-  it('reports an empty feed', async () => {
-    mockedFetchActivities.mockResolvedValue([]);
-
-    const { result } = await renderHook(() => useFeed(), {
-      wrapper: wrapper(queryClient),
-    });
-
-    await waitFor(() => expect(result.current.state).toEqual({ status: 'empty' }));
+    expect(queryClient.getQueryData(['activities', { query: '' }])).toBeDefined();
   });
 
   it.each([
@@ -178,41 +218,225 @@ describe('activity hooks', () => {
     );
   });
 
-  it('finds an activity from the shared feed cache', async () => {
-    const firstActivity = activity('one');
-    const secondActivity = activity('two');
-    queryClient.setQueryData(['activities'], [firstActivity, secondActivity]);
+  it('loads later pages, stops at a short page, and de-duplicates ids', async () => {
+    const shared = activity('shared');
+    const firstPage = [...page(0, 24), shared];
+    const secondPage = [shared, activity('tail')];
+    mockedFetchActivities.mockResolvedValueOnce(firstPage).mockResolvedValueOnce(secondPage);
 
-    const { result } = await renderHook(() => useActivity('two'), {
+    const { result } = await renderHook(() => useFeed(), {
       wrapper: wrapper(queryClient),
     });
 
-    expect(result.current.state).toEqual({ status: 'ready', activity: secondActivity });
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    expect(result.current.hasMore).toBe(true);
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    await waitFor(() => {
+      expect(result.current.hasMore).toBe(false);
+      if (result.current.state.status === 'ready') {
+        expect(result.current.state.activities).toHaveLength(26);
+        expect(result.current.state.activities.filter(({ id }) => id === 'shared')).toHaveLength(1);
+      }
+    });
+    expect(mockedFetchActivities).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ skip: 25, limit: 25 }),
+    );
+  });
+
+  it('keeps ready items and exposes a retryable next-page error', async () => {
+    const firstPage = page(0);
+    mockedFetchActivities.mockResolvedValueOnce(firstPage);
+
+    const { result } = await renderHook(() => useFeed(), {
+      wrapper: wrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+
+    let rejectNextPage: (error: unknown) => void = () => undefined;
+    const nextPagePromise = new Promise<Activity[]>((_resolve, reject) => {
+      rejectNextPage = reject;
+    });
+    mockedFetchActivities.mockReturnValueOnce(nextPagePromise);
+
+    let loadMore: Promise<void> | undefined;
+    await act(async () => {
+      loadMore = result.current.loadMore();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.isLoadingMore).toBe(true));
+
+    await act(async () => {
+      rejectNextPage(new FeedRequestError(502));
+      await loadMore;
+    });
+
+    await waitFor(() => {
+      expect(result.current.loadMoreError).toBe("We couldn't load the feed (HTTP 502).");
+      expect(result.current.state.status).toBe('ready');
+    });
+
+    mockedFetchActivities.mockResolvedValueOnce([activity('after-retry')]);
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    await waitFor(() => {
+      expect(result.current.loadMoreError).toBeNull();
+      if (result.current.state.status === 'ready') {
+        expect(result.current.state.activities).toHaveLength(26);
+      }
+    });
+  });
+
+  it('auto-fills sparse filters with a bounded number of page requests', async () => {
+    const firstPage = [activity('event', 'event'), ...page(0, 24)];
+    mockedFetchActivities.mockImplementation(({ skip = 0 } = {}) =>
+      Promise.resolve(skip === 0 ? firstPage : page(skip)),
+    );
+
+    const { result } = await renderHook(() => useFeed({ filter: 'events' }), {
+      wrapper: wrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    await waitFor(() => expect(mockedFetchActivities).toHaveBeenCalledTimes(5));
+    expect(mockedFetchActivities.mock.calls.map(([request]) => request?.skip)).toEqual([
+      0, 25, 50, 75, 100,
+    ]);
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it('trims loaded pages before a pull-to-refresh refetch', async () => {
+    const firstPage = page(0);
+    const secondPage = page(25);
+    mockedFetchActivities.mockResolvedValueOnce(firstPage).mockResolvedValueOnce(secondPage);
+
+    const { result } = await renderHook(() => useFeed(), {
+      wrapper: wrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    expect(
+      queryClient.getQueryData<{ pages: Activity[][] }>(['activities', { query: '' }])?.pages,
+    ).toHaveLength(2);
+
+    let resolveRefresh: (activities: Activity[]) => void = () => undefined;
+    const refreshPromise = new Promise<Activity[]>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    mockedFetchActivities.mockReturnValueOnce(refreshPromise);
+
+    let reload: Promise<void> | undefined;
+    await act(async () => {
+      reload = result.current.reload();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isRefreshing).toBe(true);
+    expect(
+      queryClient.getQueryData<{ pages: Activity[][] }>(['activities', { query: '' }])?.pages,
+    ).toHaveLength(1);
+    expect(mockedFetchActivities.mock.calls.map(([request]) => request?.skip)).toEqual([0, 25, 0]);
+
+    await act(async () => {
+      resolveRefresh([activity('refreshed')]);
+      await reload;
+    });
+  });
+
+  it('finds activities in the cached default feed query', async () => {
+    queryClient.setQueryDefaults(['activities'], { gcTime: Infinity });
+    const defaultActivity = activity('default-result');
+    setActivities(queryClient, '', [[defaultActivity]]);
+
+    const { result } = await renderHook(() => useActivity('default-result'), {
+      wrapper: wrapper(queryClient),
+    });
+
+    expect(result.current.state).toEqual({ status: 'ready', activity: defaultActivity });
     expect(mockedFetchActivities).not.toHaveBeenCalled();
   });
 
-  it('reports an unknown activity id as not-found', async () => {
-    mockedFetchActivities.mockResolvedValue([activity('one')]);
+  it('finds activities in a cached search query', async () => {
+    queryClient.setQueryDefaults(['activities'], { gcTime: Infinity });
+    const searchActivity = activity('search-result');
+    setActivities(queryClient, 'tennis', [[searchActivity]]);
+
+    const { result } = await renderHook(() => useActivity('search-result'), {
+      wrapper: wrapper(queryClient),
+    });
+
+    expect(result.current.state).toEqual({ status: 'ready', activity: searchActivity });
+    expect(mockedFetchActivities).not.toHaveBeenCalled();
+  });
+
+  it('fetches the default first page on a cold detail cache and reports unknown ids', async () => {
+    let resolveFeed: (activities: Activity[]) => void = () => undefined;
+    const feedPromise = new Promise<Activity[]>((resolve) => {
+      resolveFeed = resolve;
+    });
+    mockedFetchActivities.mockReturnValue(feedPromise);
 
     const { result } = await renderHook(() => useActivity('missing'), {
       wrapper: wrapper(queryClient),
     });
 
+    expect(result.current.state).toEqual({ status: 'loading' });
+    await act(async () => {
+      resolveFeed([activity('known')]);
+      await feedPromise;
+    });
     await waitFor(() => expect(result.current.state).toEqual({ status: 'not-found' }));
+    expect(mockedFetchActivities).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, limit: 25, query: '' }),
+    );
   });
 
-  it('fetches the feed when a detail screen starts with a cold cache', async () => {
-    const requestedActivity = activity('deep-link');
-    mockedFetchActivities.mockResolvedValue([requestedActivity]);
+  it('shows the detail error and loading state while retrying', async () => {
+    mockedFetchActivities.mockRejectedValueOnce(new FeedRequestError(503));
 
-    const { result } = await renderHook(() => useActivity('deep-link'), {
+    const { result } = await renderHook(() => useActivity('missing'), {
       wrapper: wrapper(queryClient),
     });
 
-    expect(result.current.state).toEqual({ status: 'loading' });
     await waitFor(() =>
-      expect(result.current.state).toEqual({ status: 'ready', activity: requestedActivity }),
+      expect(result.current.state).toEqual({
+        status: 'error',
+        message: "We couldn't load the feed (HTTP 503).",
+      }),
     );
-    expect(mockedFetchActivities).toHaveBeenCalledTimes(1);
+
+    let resolveRetry: (activities: Activity[]) => void = () => undefined;
+    const retryPromise = new Promise<Activity[]>((resolve) => {
+      resolveRetry = resolve;
+    });
+    mockedFetchActivities.mockReturnValueOnce(retryPromise);
+
+    let reload: Promise<void> | undefined;
+    await act(async () => {
+      reload = result.current.reload();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(result.current.state).toEqual({ status: 'loading' }));
+
+    await act(async () => {
+      resolveRetry([activity('missing')]);
+      await reload;
+    });
+
+    await waitFor(() =>
+      expect(result.current.state).toEqual({
+        status: 'ready',
+        activity: activity('missing'),
+      }),
+    );
   });
 });

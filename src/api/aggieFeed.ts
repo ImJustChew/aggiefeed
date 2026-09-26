@@ -1,7 +1,17 @@
 import type { Activity } from '@/domain/activity';
 import { parseActivities } from '@/domain/parseActivities';
 
-const FEED_URL = 'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25';
+const FEED_URL = 'https://aggiefeed.ucdavis.edu/api/v1/activity/public';
+
+export const ACTIVITY_PAGE_SIZE = 25;
+export const MAX_ACTIVITY_SKIP = 4000;
+
+export interface FetchActivitiesOptions {
+  skip?: number;
+  limit?: number;
+  query?: string;
+  signal?: AbortSignal;
+}
 
 export class FeedRequestError extends Error {
   constructor(readonly status: number) {
@@ -10,8 +20,17 @@ export class FeedRequestError extends Error {
   }
 }
 
-export async function fetchActivities(signal?: AbortSignal): Promise<Activity[]> {
-  const response = await fetch(FEED_URL, {
+export async function fetchActivities({
+  skip = 0,
+  limit = ACTIVITY_PAGE_SIZE,
+  query,
+  signal,
+}: FetchActivitiesOptions = {}): Promise<Activity[]> {
+  const params = new URLSearchParams({ s: String(skip), l: String(limit) });
+  const trimmedQuery = query?.trim();
+  if (trimmedQuery) params.set('q', trimmedQuery);
+
+  const response = await fetch(`${FEED_URL}?${params.toString()}`, {
     signal,
     headers: { Accept: 'application/json' },
   });

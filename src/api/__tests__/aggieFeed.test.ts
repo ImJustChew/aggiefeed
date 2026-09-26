@@ -21,12 +21,49 @@ describe('fetchActivities', () => {
     } as unknown as Response);
 
     const controller = new AbortController();
-    const activities = await fetchActivities(controller.signal);
+    const activities = await fetchActivities({ signal: controller.signal });
 
     expect(activities).toHaveLength(3);
     expect(fetchMock).toHaveBeenCalledWith(
       'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25',
       { signal: controller.signal, headers: { Accept: 'application/json' } },
+    );
+  });
+
+  it('requests a later page with the fixed page size', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue([]),
+    } as unknown as Response);
+
+    await fetchActivities({ skip: 25, limit: 25 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=25&l=25',
+      expect.anything(),
+    );
+  });
+
+  it('includes a trimmed full-text query and omits blank queries', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue([]),
+    } as unknown as Response);
+
+    await fetchActivities({ query: ' tennis ' });
+    await fetchActivities({ query: '  ' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25&q=tennis',
+      expect.anything(),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25',
+      expect.anything(),
     );
   });
 
