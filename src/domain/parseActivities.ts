@@ -41,13 +41,13 @@ function toEvent(object: Record<string, unknown>): ActivityEvent | null {
   };
 }
 
-function toActivity(raw: ApiActivity, index: number): Activity {
+function toActivity(raw: ApiActivity, index: number, skip: number): Activity {
   const actor = isRecord(raw.actor) ? raw.actor : null;
   const object = isRecord(raw.object) ? raw.object : null;
   const model = object !== null && isRecord(object.ucdEdusModel) ? object.ucdEdusModel : null;
 
   return {
-    id: nonBlankString(raw.id) ?? nonBlankString(raw._id) ?? `activity-${index}`,
+    id: nonBlankString(raw.id) ?? nonBlankString(raw._id) ?? `activity-${skip + index}`,
     title: cleanText(stringValue(raw.title)),
     source: cleanText(actor === null ? null : stringValue(actor.displayName)),
     objectType: cleanText(object === null ? null : stringValue(object.objectType)),
@@ -66,11 +66,11 @@ export class InvalidFeedError extends Error {
 }
 
 /** Validates the top-level response and maps only object entries. */
-export function parseActivities(payload: unknown): Activity[] {
+export function parseActivities(payload: unknown, skip = 0): Activity[] {
   if (!Array.isArray(payload)) throw new InvalidFeedError();
 
   return payload.flatMap((item: unknown, index) => {
     if (!isRecord(item)) return [];
-    return [toActivity(item as ApiActivity, index)];
+    return [toActivity(item as ApiActivity, index, skip)];
   });
 }

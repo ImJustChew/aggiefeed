@@ -1,3 +1,4 @@
+import { flattenActivities } from '@/domain/activity';
 import { feedFixture } from '@/domain/fixtures/feed.fixture';
 import { InvalidFeedError, parseActivities } from '@/domain/parseActivities';
 
@@ -82,5 +83,15 @@ describe('parseActivities', () => {
 
   it('throws a typed error for a non-array response', () => {
     expect(() => parseActivities({ message: 'bad request' })).toThrow(InvalidFeedError);
+  });
+
+  it('keeps fallback ids unique across pages when flattening', () => {
+    const firstPage = parseActivities([{}], 0);
+    const secondPage = parseActivities([{}], 25);
+
+    expect(flattenActivities([firstPage, secondPage]).map(({ id }) => id)).toEqual([
+      'activity-0',
+      'activity-25',
+    ]);
   });
 });

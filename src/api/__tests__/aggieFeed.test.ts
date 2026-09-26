@@ -45,6 +45,18 @@ describe('fetchActivities', () => {
     );
   });
 
+  it('uses the page offset when assigning fallback ids', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue([{}]),
+    } as unknown as Response);
+
+    await expect(fetchActivities({ skip: 25 })).resolves.toEqual([
+      expect.objectContaining({ id: 'activity-25' }),
+    ]);
+  });
+
   it('includes a trimmed full-text query and omits blank queries', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

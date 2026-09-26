@@ -38,5 +38,5 @@ export async function fetchActivities({
   if (!response.ok) throw new FeedRequestError(response.status);
 
   const payload: unknown = await response.json();
-  return parseActivities(payload);
+  return parseActivities(payload, skip);
 }
