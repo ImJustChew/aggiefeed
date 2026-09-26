@@ -18,6 +18,14 @@ export function formatDate(date: Date): string {
   });
 }
 
+export function formatShortDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function formatDateTime(date: Date): string {
   const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return `${formatDate(date)} · ${time}`;

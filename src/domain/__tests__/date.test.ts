@@ -1,4 +1,10 @@
-import { formatDate, formatDateTime, formatRelative, parseDate } from '@/domain/date';
+import {
+  formatDate,
+  formatDateTime,
+  formatRelative,
+  formatShortDate,
+  parseDate,
+} from '@/domain/date';
 
 describe('date helpers', () => {
   const now = new Date('2026-09-25T12:00:00Z');
@@ -14,6 +20,7 @@ describe('date helpers', () => {
 
     expect(formatDate(date)).toBe('Thu, Sep 24, 2026');
     expect(formatDateTime(date)).toBe('Thu, Sep 24, 2026 · 10:00 PM');
+    expect(formatShortDate(date)).toBe('Thu, Sep 24');
   });
 
   it('uses relative formatting for recent dates and an absolute date otherwise', () => {
