@@ -53,6 +53,10 @@
   "jest": {
     "preset": "jest-expo",
     "globalSetup": "<rootDir>/jest.globalSetup.js",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "resolver": "react-native-worklets/jest/resolver",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
