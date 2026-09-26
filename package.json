@@ -63,6 +63,7 @@
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
+    "clearMocks": true,
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/.expo/"

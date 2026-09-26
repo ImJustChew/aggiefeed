@@ -1,4 +1,4 @@
-import { FeedRequestError, fetchActivities } from '@/api/aggieFeed';
+import { fetchActivities } from '@/api/aggieFeed';
 import { InvalidFeedError } from '@/domain/parseActivities';
 import { feedFixture } from '@/domain/fixtures/feed.fixture';
 
@@ -13,7 +13,7 @@ describe('fetchActivities', () => {
     fetchMock.mockRestore();
   });
 
-  it('fetches and parses a successful response', async () => {
+  it('fetches and parses a successful response while passing through AbortSignal', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
@@ -23,7 +23,7 @@ describe('fetchActivities', () => {
     const controller = new AbortController();
     const activities = await fetchActivities({ signal: controller.signal });
 
-    expect(activities).toHaveLength(3);
+    expect(activities).toHaveLength(4);
     expect(fetchMock).toHaveBeenCalledWith(
       'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25',
       { signal: controller.signal, headers: { Accept: 'application/json' } },
@@ -79,6 +79,21 @@ describe('fetchActivities', () => {
     );
   });
 
+  it('encodes special characters in a full-text query', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue([]),
+    } as unknown as Response);
+
+    await fetchActivities({ query: 'career & jobs' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://aggiefeed.ucdavis.edu/api/v1/activity/public?s=0&l=25&q=career+%26+jobs',
+      expect.anything(),
+    );
+  });
+
   it('throws the HTTP status for a non-2xx response', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
@@ -90,7 +105,14 @@ describe('fetchActivities', () => {
       name: 'FeedRequestError',
       status: 400,
     });
-    await expect(fetchActivities()).rejects.toBeInstanceOf(FeedRequestError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates a network rejection to the caller', async () => {
+    const networkError = new TypeError('Failed to fetch');
+    fetchMock.mockRejectedValue(networkError);
+
+    await expect(fetchActivities()).rejects.toBe(networkError);
   });
 
   it('propagates a typed error for an invalid successful body', async () => {

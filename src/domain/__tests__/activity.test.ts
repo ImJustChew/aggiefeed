@@ -16,7 +16,7 @@ function activity(id: string, objectType: string | null = 'notification'): Activ
 }
 
 describe('activity helpers', () => {
-  it('keeps the existing event detection semantics', () => {
+  it('treats items with event data or objectType event as events', () => {
     expect(isEvent(activity('metadata', 'event'))).toBe(true);
     expect(
       isEvent({

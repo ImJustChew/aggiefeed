@@ -20,7 +20,32 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
 }
 
 describe('FeedItem', () => {
-  it('renders title and source fallbacks, omits a null summary, and handles presses', async () => {
+  it('renders title and source fallbacks', async () => {
+    await render(
+      <FeedItem
+        activity={makeActivity({ title: null, source: null, summary: null, published: null })}
+        index={0}
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Untitled')).toBeOnTheScreen();
+    expect(screen.getByText('Unknown source · Date unavailable')).toBeOnTheScreen();
+  });
+
+  it('omits a null summary', async () => {
+    await render(
+      <FeedItem
+        activity={makeActivity({ title: null, source: null, summary: null, published: null })}
+        index={0}
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('No summary available.')).not.toBeOnTheScreen();
+  });
+
+  it('handles presses', async () => {
     const onPress = jest.fn();
     await render(
       <FeedItem
@@ -29,10 +54,6 @@ describe('FeedItem', () => {
         onPress={onPress}
       />,
     );
-
-    expect(screen.getByText('Untitled')).toBeOnTheScreen();
-    expect(screen.getByText('Unknown source · Date unavailable')).toBeOnTheScreen();
-    expect(screen.queryByText('No summary available.')).not.toBeOnTheScreen();
 
     const user = userEvent.setup();
     await user.press(screen.getByRole('button', { name: 'Untitled. Unknown source' }));

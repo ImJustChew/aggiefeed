@@ -1,12 +1,18 @@
 import { flattenActivities } from '@/domain/activity';
-import { feedFixture } from '@/domain/fixtures/feed.fixture';
+import {
+  allDayEvent,
+  eventWithLocation,
+  feedFixture,
+  itemMissingFields,
+  newsItem,
+} from '@/domain/fixtures/feed.fixture';
 import { InvalidFeedError, parseActivities } from '@/domain/parseActivities';
 
 describe('parseActivities', () => {
   it('normalizes news, events, and missing fields from a feed fixture', () => {
     const activities = parseActivities(feedFixture);
 
-    expect(activities).toHaveLength(3);
+    expect(activities).toHaveLength(4);
     expect(activities[0]).toMatchObject({
       id: 'news-1',
       title: 'Up to $36.5M Funds ‘Cyborg’ Cell Project',
@@ -23,14 +29,23 @@ describe('parseActivities', () => {
       ],
       url: 'https://example.com/story',
     });
+    expect(activities[0]?.id).toBe(newsItem.id);
     expect(activities[1]?.event).toMatchObject({
-      location: null,
+      location: 'Student Community Center, Room 100',
       start: new Date('2026-09-25T21:10:00Z'),
       end: new Date('2026-09-25T22:00:00Z'),
       isAllDay: false,
     });
-    expect(activities[2]).toEqual({
-      id: 'activity-2',
+    expect(activities[1]?.id).toBe(eventWithLocation.id);
+    expect(activities[2]?.event).toMatchObject({
+      location: 'UC Davis campus',
+      start: new Date('2026-09-28T00:00:00Z'),
+      end: new Date('2026-09-29T00:00:00Z'),
+      isAllDay: true,
+    });
+    expect(activities[2]?.id).toBe(allDayEvent.id);
+    expect(activities[3]).toEqual({
+      id: 'activity-3',
       title: null,
       source: null,
       objectType: null,
@@ -95,8 +110,8 @@ describe('parseActivities', () => {
   });
 
   it('keeps fallback ids unique across pages when flattening', () => {
-    const firstPage = parseActivities([{}], 0);
-    const secondPage = parseActivities([{}], 25);
+    const firstPage = parseActivities([itemMissingFields], 0);
+    const secondPage = parseActivities([itemMissingFields], 25);
 
     expect(flattenActivities([firstPage, secondPage]).map(({ id }) => id)).toEqual([
       'activity-0',

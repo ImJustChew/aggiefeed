@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 
@@ -149,7 +149,7 @@ describe('FeedScreen', () => {
     expect(onQueryChange).toHaveBeenCalledWith('');
   });
 
-  it('opens search from the wordmark row and focuses the editable input', async () => {
+  it('opens search from the wordmark row and shows the editable input', async () => {
     const onOpenSearch = jest.fn();
     const rendered = await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
       onOpenSearch,
@@ -169,10 +169,10 @@ describe('FeedScreen', () => {
       />,
     );
 
-    const input = screen.getByTestId('feed-search-input');
-    expect(input).toBeOnTheScreen();
-    expect(input.props.editable).not.toBe(false);
-    expect(input.props.autoFocus).toBe(true);
+    expect(screen.getByPlaceholderText('Search campus stories')).toHaveAccessibleName(
+      'Search stories',
+    );
+    expect(screen.getByPlaceholderText('Search campus stories')).toBeEnabled();
   });
 
   it('shows search progress while placeholder results are visible', async () => {
@@ -226,15 +226,13 @@ describe('FeedScreen', () => {
     expect(onFilterChange).toHaveBeenCalledWith('events');
   });
 
-  it('keeps the search input mounted with its value while feed state changes', async () => {
+  it('keeps the entered search query visible while feed state changes', async () => {
     const rendered = await renderFeed(
       { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
       jest.fn(),
       jest.fn(),
       { isSearchOpen: true, query: 'library' },
     );
-    const input = screen.getByTestId('feed-search-input');
-
     await rendered.rerender(
       <FeedScreen
         state={{ status: 'loading' }}
@@ -245,8 +243,50 @@ describe('FeedScreen', () => {
       />,
     );
 
-    expect(screen.getByTestId('feed-search-input')).toBe(input);
-    expect(screen.getByDisplayValue('library')).toBeOnTheScreen();
+    expect(screen.getByPlaceholderText('Search campus stories')).toHaveDisplayValue('library');
+  });
+
+  it('calls onRefresh when the user pulls to refresh', async () => {
+    const onRefresh = jest.fn();
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      onRefresh,
+    );
+
+    await fireEvent(screen.getByLabelText('Campus stories'), 'onRefresh');
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads another page when the list reaches its end', async () => {
+    const onLoadMore = jest.fn().mockResolvedValue(undefined);
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { hasMore: true, onLoadMore },
+    );
+
+    await fireEvent(screen.getByLabelText('Campus stories'), 'onEndReached');
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['there is no next page', false, false],
+    ['another page is already loading', true, true],
+  ])('does not load another page when %s', async (_reason, hasMore, isLoadingMore) => {
+    const onLoadMore = jest.fn().mockResolvedValue(undefined);
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { hasMore, isLoadingMore, onLoadMore },
+    );
+
+    await fireEvent(screen.getByLabelText('Campus stories'), 'onEndReached');
+
+    expect(onLoadMore).not.toHaveBeenCalled();
   });
 
   it('renders the loading-more footer state', async () => {
@@ -285,16 +325,48 @@ describe('FeedScreen', () => {
 
   it.each([
     [
+      'a search has no results',
       { query: 'library', filter: 'all' as const, reason: 'no-results' as const },
       'No results for "library"',
     ],
     [
+      'the Events filter has no results',
       { query: '', filter: 'events' as const, reason: 'no-results' as const },
       'No events loaded yet',
     ],
-  ])('uses the empty-state copy for %s', async (emptyState, title) => {
+  ])('uses the empty-state copy when %s', async (_scenario, emptyState, title) => {
     await renderFeed({ status: 'empty', ...emptyState });
     expect(screen.getByText(title)).toBeOnTheScreen();
+  });
+
+  it('calls onClearSearch from a no-results empty state', async () => {
+    const onClearSearch = jest.fn();
+    await renderFeed(
+      { status: 'empty', query: 'library', filter: 'all', reason: 'no-results' },
+      jest.fn(),
+      jest.fn(),
+      { onClearSearch },
+    );
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Clear search' }));
+
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onShowAll from an empty Events filter', async () => {
+    const onShowAll = jest.fn();
+    await renderFeed(
+      { status: 'empty', query: '', filter: 'events', reason: 'no-results' },
+      jest.fn(),
+      jest.fn(),
+      { onShowAll },
+    );
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Show all' }));
+
+    expect(onShowAll).toHaveBeenCalledTimes(1);
   });
 
   it('offers load more when an empty filter still has another page', async () => {

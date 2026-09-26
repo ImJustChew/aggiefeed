@@ -7,6 +7,8 @@ import {
   parseDate,
 } from '@/domain/date';
 
+process.env.TZ = 'UTC';
+
 describe('date helpers', () => {
   const now = new Date('2026-09-25T12:00:00Z');
 
