@@ -30,6 +30,11 @@ export function FeedHeader({ date = new Date() }: FeedHeaderProps) {
 const styles = StyleSheet.create({
   container: { paddingTop: spacing.lg, paddingBottom: spacing.xl },
   date: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.1 },
-  title: { fontFamily: fonts.bold, fontSize: 38, lineHeight: 44, marginTop: spacing.sm },
+  title: {
+    fontFamily: fonts.serifSemibold,
+    fontSize: 40,
+    lineHeight: 46,
+    marginTop: spacing.sm,
+  },
   subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
 });

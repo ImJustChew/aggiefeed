@@ -7,6 +7,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { Newsreader_600SemiBold, Newsreader_700Bold } from '@expo-google-fonts/newsreader';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -34,6 +35,8 @@ export default function RootLayout() {
     [fonts.medium]: Inter_500Medium,
     [fonts.semibold]: Inter_600SemiBold,
     [fonts.bold]: Inter_700Bold,
+    [fonts.serifSemibold]: Newsreader_600SemiBold,
+    [fonts.serifBold]: Newsreader_700Bold,
   });
 
   useEffect(() => {

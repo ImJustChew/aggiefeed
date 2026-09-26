@@ -76,6 +76,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: spacing.sm - 2,
   },
-  title: { fontFamily: fonts.semibold, fontSize: 19, lineHeight: 25, marginTop: spacing.sm },
+  title: {
+    fontFamily: fonts.serifSemibold,
+    fontSize: 21,
+    lineHeight: 27,
+    marginTop: spacing.sm,
+  },
   summary: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
 });

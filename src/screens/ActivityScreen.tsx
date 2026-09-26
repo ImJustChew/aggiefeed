@@ -142,7 +142,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, marginTop: spacing.md },
+  title: {
+    fontFamily: fonts.serifBold,
+    fontSize: 31,
+    lineHeight: 37,
+    marginTop: spacing.md,
+  },
   byline: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 22, marginTop: spacing.lg },
   published: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, marginTop: spacing.xs },
   eventBlock: {

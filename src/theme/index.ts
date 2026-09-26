@@ -29,6 +29,8 @@ export const fonts = {
   medium: 'Inter_500Medium',
   semibold: 'Inter_600SemiBold',
   bold: 'Inter_700Bold',
+  serifSemibold: 'Newsreader_600SemiBold',
+  serifBold: 'Newsreader_700Bold',
 };
 
 export const spacing = {
