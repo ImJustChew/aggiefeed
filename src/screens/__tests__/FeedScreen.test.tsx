@@ -30,7 +30,10 @@ function makeActivity(id = 'story-1'): Activity {
 }
 
 type FeedControlProps = {
+  isSearchOpen: boolean;
   query: string;
+  onOpenSearch: () => void;
+  onCloseSearch: () => void;
   filter: ActivityFilter;
   onQueryChange: (query: string) => void;
   onFilterChange: (filter: ActivityFilter) => void;
@@ -44,7 +47,10 @@ type FeedControlProps = {
 
 function makeFeedControlProps(overrides: Partial<FeedControlProps> = {}): FeedControlProps {
   return {
+    isSearchOpen: false,
     query: '',
+    onOpenSearch: jest.fn(),
+    onCloseSearch: jest.fn(),
     filter: 'all',
     onQueryChange: jest.fn(),
     onFilterChange: jest.fn(),
@@ -129,6 +135,7 @@ describe('FeedScreen', () => {
   it('clears a non-empty search from the search field', async () => {
     const onQueryChange = jest.fn();
     await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
+      isSearchOpen: true,
       query: 'library',
       onQueryChange,
     });
@@ -137,6 +144,57 @@ describe('FeedScreen', () => {
     const user = userEvent.setup();
     await user.press(screen.getByRole('button', { name: 'Clear search' }));
     expect(onQueryChange).toHaveBeenCalledWith('');
+  });
+
+  it('opens search from the wordmark row and focuses the editable input', async () => {
+    const onOpenSearch = jest.fn();
+    const rendered = await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
+      onOpenSearch,
+    });
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Search stories' }));
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+
+    await rendered.rerender(
+      <FeedScreen
+        state={{ status: 'loading' }}
+        isRefreshing={false}
+        onRefresh={jest.fn()}
+        onPressActivity={jest.fn()}
+        {...makeFeedControlProps({ isSearchOpen: true })}
+      />,
+    );
+
+    const input = screen.getByTestId('feed-search-input');
+    expect(input).toBeOnTheScreen();
+    expect(input.props.editable).not.toBe(false);
+    expect(input.props.autoFocus).toBe(true);
+  });
+
+  it('clears the query and restores the wordmark when search is cancelled', async () => {
+    const onCloseSearch = jest.fn();
+    const rendered = await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
+      isSearchOpen: true,
+      onCloseSearch,
+      query: 'library',
+    });
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCloseSearch).toHaveBeenCalledTimes(1);
+
+    await rendered.rerender(
+      <FeedScreen
+        state={{ status: 'loading' }}
+        isRefreshing={false}
+        onRefresh={jest.fn()}
+        onPressActivity={jest.fn()}
+        {...makeFeedControlProps({ isSearchOpen: false, query: '' })}
+      />,
+    );
+
+    expect(screen.getByText('AggieFeed')).toBeOnTheScreen();
   });
 
   it('reports tab selection and exposes the selected accessibility state', async () => {
@@ -159,17 +217,17 @@ describe('FeedScreen', () => {
       { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
       jest.fn(),
       jest.fn(),
-      { query: 'library' },
+      { isSearchOpen: true, query: 'library' },
     );
     const input = screen.getByTestId('feed-search-input');
 
-    rendered.rerender(
+    await rendered.rerender(
       <FeedScreen
         state={{ status: 'loading' }}
         isRefreshing={false}
         onRefresh={jest.fn()}
         onPressActivity={jest.fn()}
-        {...makeFeedControlProps({ query: 'library' })}
+        {...makeFeedControlProps({ isSearchOpen: true, query: 'library' })}
       />,
     );
 

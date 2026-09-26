@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -17,42 +17,13 @@ const FILTER_OPTIONS: readonly { label: string; value: ActivityFilter }[] = [
 ];
 
 interface FeedControlsProps {
-  query: string;
   filter: ActivityFilter;
-  onQueryChange: (query: string) => void;
   onFilterChange: (filter: ActivityFilter) => void;
 }
 
-export function FeedControls({ query, filter, onQueryChange, onFilterChange }: FeedControlsProps) {
-  const theme = useTheme();
-
+export function FeedControls({ filter, onFilterChange }: FeedControlsProps) {
   return (
     <View style={styles.container}>
-      <View style={[styles.searchRow, { borderBottomColor: theme.colors.hairline }]}>
-        <TextInput
-          testID="feed-search-input"
-          accessibilityLabel="Search stories"
-          autoCapitalize="none"
-          autoCorrect={false}
-          onChangeText={onQueryChange}
-          placeholder="Search campus stories"
-          placeholderTextColor={theme.colors.textTertiary}
-          returnKeyType="search"
-          style={[styles.input, { color: theme.colors.text }]}
-          value={query}
-        />
-        {query.length > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-            hitSlop={8}
-            onPress={() => onQueryChange('')}
-            style={styles.clearButton}
-          >
-            <Text style={[styles.clearText, { color: theme.colors.textSecondary }]}>×</Text>
-          </Pressable>
-        ) : null}
-      </View>
       <FilterTabs filter={filter} onFilterChange={onFilterChange} />
     </View>
   );
@@ -124,26 +95,6 @@ function FilterTabs({ filter, onFilterChange }: FilterTabsProps) {
 
 const styles = StyleSheet.create({
   container: { paddingBottom: spacing.sm },
-  searchRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    minHeight: 44,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  input: {
-    flex: 1,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    minHeight: 44,
-    paddingVertical: spacing.sm,
-  },
-  clearButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    minWidth: 44,
-  },
-  clearText: { fontFamily: fonts.regular, fontSize: 26, lineHeight: 30 },
   tabs: {
     flexDirection: 'row',
     minHeight: 44,

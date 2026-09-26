@@ -24,6 +24,9 @@ interface FeedScreenProps {
   isRefreshing: boolean;
   onRefresh: () => void;
   onPressActivity: (id: string) => void;
+  isSearchOpen: boolean;
+  onOpenSearch: () => void;
+  onCloseSearch: () => void;
   query: string;
   filter: ActivityFilter;
   onQueryChange: (query: string) => void;
@@ -41,6 +44,9 @@ export function FeedScreen({
   isRefreshing,
   onRefresh,
   onPressActivity,
+  isSearchOpen,
+  onOpenSearch,
+  onCloseSearch,
   query,
   filter,
   onQueryChange,
@@ -58,6 +64,9 @@ export function FeedScreen({
   const loadMoreInFlight = useRef(false);
   const scrollY = useSharedValue(0);
   const headerHeight = useSharedValue(0);
+  const collapseDistance = useSharedValue(0);
+  const measuredHeaderHeightRef = useRef(0);
+  const measuredWordmarkRowHeightRef = useRef(0);
   const [measuredControlsHeight, setMeasuredControlsHeight] = useState(0);
   const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState(0);
   const activities = state.status === 'ready' ? state.activities : [];
@@ -70,47 +79,58 @@ export function FeedScreen({
   const handleHeaderLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const nextHeight = event.nativeEvent.layout.height;
-      if (nextHeight === 0 || nextHeight === measuredHeaderHeight) return;
+      if (nextHeight <= 0 || measuredHeaderHeightRef.current > 0) return;
 
+      measuredHeaderHeightRef.current = nextHeight;
       headerHeight.set(nextHeight);
+      collapseDistance.set(Math.max(0, nextHeight - measuredWordmarkRowHeightRef.current));
       setMeasuredHeaderHeight(nextHeight);
     },
-    [headerHeight, measuredHeaderHeight],
+    [collapseDistance, headerHeight],
   );
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = Math.max(0, event.contentOffset.y);
+  const handleWordmarkRowLayout = useCallback(
+    (nextHeight: number) => {
+      if (nextHeight <= 0 || measuredWordmarkRowHeightRef.current === nextHeight) return;
+
+      measuredWordmarkRowHeightRef.current = nextHeight;
+      if (measuredHeaderHeightRef.current > 0) {
+        collapseDistance.set(Math.max(0, measuredHeaderHeightRef.current - nextHeight));
+      }
     },
+    [collapseDistance],
+  );
+
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = Math.max(0, event.contentOffset.y);
   });
 
   const headerAnimatedStyle = useAnimatedStyle(() => {
     if (headerHeight.value === 0) return {};
 
+    const collapseRange = collapseDistance.value;
+    if (collapseRange <= 0) return { height: headerHeight.value };
+
     const collapseOffset = interpolate(
       scrollY.value,
-      [0, headerHeight.value],
-      [0, headerHeight.value],
+      [0, collapseRange],
+      [0, collapseRange],
       Extrapolation.CLAMP,
     );
 
-    return {
-      opacity: interpolate(collapseOffset, [0, headerHeight.value], [1, 0], Extrapolation.CLAMP),
-      transform: [
-        {
-          translateY: -collapseOffset,
-        },
-      ],
-    };
+    return { height: headerHeight.value - collapseOffset };
   });
 
   const controlsAnimatedStyle = useAnimatedStyle(() => {
     if (headerHeight.value === 0) return {};
 
+    const collapseRange = collapseDistance.value;
+    if (collapseRange <= 0) return { transform: [{ translateY: 0 }] };
+
     const collapseOffset = interpolate(
       scrollY.value,
-      [0, headerHeight.value],
-      [0, headerHeight.value],
+      [0, collapseRange],
+      [0, collapseRange],
       Extrapolation.CLAMP,
     );
 
@@ -193,28 +213,44 @@ export function FeedScreen({
         ]}
         refreshing={isRefreshing}
         onRefresh={onRefresh}
+        onScroll={onScroll}
         progressViewOffset={insets.top + measuredHeaderHeight + measuredControlsHeight}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        onScroll={scrollHandler}
         scrollEventThrottle={16}
         contentInsetAdjustmentBehavior="never"
         accessibilityLabel="Campus stories"
       />
-      <Animated.View
-        pointerEvents="none"
+      <View
+        onLayout={handleHeaderLayout}
+        pointerEvents="box-none"
         style={[
-          styles.collapsingHeader,
-          { backgroundColor: theme.colors.background, top: insets.top },
-          headerAnimatedStyle,
+          styles.headerMeasurement,
+          { height: measuredHeaderHeight || undefined, top: insets.top },
         ]}
       >
-        <View onLayout={handleHeaderLayout}>
-          <FeedHeader date={fetchedAt} />
-        </View>
-      </Animated.View>
+        <Animated.View
+          style={[
+            styles.collapsingHeader,
+            { backgroundColor: theme.colors.background },
+            headerAnimatedStyle,
+          ]}
+        >
+          <FeedHeader
+            collapseDistance={collapseDistance}
+            date={fetchedAt}
+            isSearchOpen={isSearchOpen}
+            onCloseSearch={onCloseSearch}
+            onOpenSearch={onOpenSearch}
+            onQueryChange={onQueryChange}
+            onRowLayout={handleWordmarkRowLayout}
+            query={query}
+            scrollY={scrollY}
+          />
+        </Animated.View>
+      </View>
       <Animated.View
         onLayout={handleControlsLayout}
         style={[
@@ -226,12 +262,7 @@ export function FeedScreen({
           controlsAnimatedStyle,
         ]}
       >
-        <FeedControls
-          filter={filter}
-          onFilterChange={onFilterChange}
-          onQueryChange={onQueryChange}
-          query={query}
-        />
+        <FeedControls filter={filter} onFilterChange={onFilterChange} />
       </Animated.View>
       <View
         pointerEvents="none"
@@ -252,6 +283,11 @@ function FeedItemSeparator() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerMeasurement: {
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
   controls: {
     left: 0,
     paddingHorizontal: spacing.lg,
@@ -269,11 +305,9 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   collapsingHeader: {
-    left: 0,
     overflow: 'hidden',
     paddingHorizontal: spacing.lg,
-    position: 'absolute',
-    right: 0,
+    width: '100%',
     zIndex: 1,
   },
   listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },

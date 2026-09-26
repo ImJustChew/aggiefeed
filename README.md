@@ -144,6 +144,8 @@ from later pages, capped at four additional page requests.
   contain fewer than the requested amount after the four-page auto-fill limit.
 - Search uses the server's full-text `q` parameter after a short input debounce;
   type tabs filter the normalized results locally.
+- Search opens from the icon beside the `AggieFeed` wordmark; the open field
+  keeps its query until the user clears or cancels it.
 - Published and event times use the device's local time zone.
 - `objectType` is shown with its raw value formatted as a label in Details,
   while the top of the screen uses a friendlier label such as News or Event.
