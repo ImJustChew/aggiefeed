@@ -12,10 +12,16 @@ export default function FeedRoute() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ActivityFilter>('all');
   const debouncedQuery = useDebouncedValue(query);
-  const { state, loadMore, hasMore, isLoadingMore, loadMoreError, isRefreshing, reload } = useFeed({
-    query: debouncedQuery,
-    filter,
-  });
+  const {
+    state,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    loadMoreError,
+    isSearching,
+    isRefreshing,
+    reload,
+  } = useFeed({ query: debouncedQuery, filter });
 
   const clearSearch = useCallback(() => setQuery(''), []);
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
@@ -39,6 +45,10 @@ export default function FeedRoute() {
     return () => subscription.remove();
   }, [closeSearch, isSearchOpen]);
 
+  const onPressActivity = useCallback((id: string) => {
+    router.push({ pathname: '/activity/[id]', params: { id } });
+  }, []);
+
   return (
     <FeedScreen
       state={state}
@@ -55,9 +65,10 @@ export default function FeedRoute() {
       hasMore={hasMore}
       isLoadingMore={isLoadingMore}
       loadMoreError={loadMoreError}
+      isSearching={isSearching}
       onClearSearch={clearSearch}
       onShowAll={showAll}
-      onPressActivity={(id) => router.push({ pathname: '/activity/[id]', params: { id } })}
+      onPressActivity={onPressActivity}
     />
   );
 }

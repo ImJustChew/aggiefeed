@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, {
   Easing,
@@ -20,6 +20,7 @@ import { AnimatedReveal } from './AnimatedReveal';
 interface FeedHeaderProps {
   date?: Date;
   isSearchOpen?: boolean;
+  isSearching?: boolean;
   onOpenSearch?: () => void;
   onCloseSearch?: () => void;
   onQueryChange?: (query: string) => void;
@@ -32,6 +33,7 @@ interface FeedHeaderProps {
 export function FeedHeader({
   date = new Date(),
   isSearchOpen = false,
+  isSearching = false,
   onOpenSearch,
   onCloseSearch,
   onQueryChange,
@@ -210,6 +212,15 @@ export function FeedHeader({
                 <Text style={[styles.clearText, { color: theme.colors.textSecondary }]}>×</Text>
               </Pressable>
             ) : null}
+            {isSearching ? (
+              <ActivityIndicator
+                accessibilityLabel="Searching stories"
+                accessibilityRole="progressbar"
+                color={theme.colors.accent}
+                size="small"
+                style={styles.searchIndicator}
+              />
+            ) : null}
           </View>
           <Pressable
             accessibilityLabel="Cancel"
@@ -274,6 +285,7 @@ const styles = StyleSheet.create({
     minWidth: 44,
   },
   clearText: { fontFamily: fonts.regular, fontSize: 26, lineHeight: 30 },
+  searchIndicator: { marginHorizontal: spacing.sm },
   cancelButton: {
     alignItems: 'center',
     justifyContent: 'center',

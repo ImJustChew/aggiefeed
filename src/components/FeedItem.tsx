@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Activity } from '@/domain/activity';
@@ -20,11 +21,12 @@ interface FeedItemProps {
   onPress: (id: string) => void;
 }
 
-export function FeedItem({ activity, index, onPress }: FeedItemProps) {
+export const FeedItem = memo(function FeedItem({ activity, index, onPress }: FeedItemProps) {
   const theme = useTheme();
   const title = displayTitle(activity);
   const source = displaySource(activity);
   const event = isEvent(activity);
+  const handlePress = useCallback(() => onPress(activity.id), [activity.id, onPress]);
 
   return (
     <AnimatedReveal delay={Math.min(index, 7) * 36}>
@@ -32,7 +34,7 @@ export function FeedItem({ activity, index, onPress }: FeedItemProps) {
         accessibilityRole="button"
         accessibilityLabel={`${title}. ${source}`}
         accessibilityHint="Opens the full activity"
-        onPress={() => onPress(activity.id)}
+        onPress={handlePress}
         style={styles.pressable}
       >
         <View style={styles.kickerRow}>
@@ -64,7 +66,7 @@ export function FeedItem({ activity, index, onPress }: FeedItemProps) {
       </AnimatedPressable>
     </AnimatedReveal>
   );
-}
+});
 
 const styles = StyleSheet.create({
   pressable: { minHeight: 44, paddingVertical: spacing.lg },

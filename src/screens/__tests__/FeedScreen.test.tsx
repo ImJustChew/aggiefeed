@@ -31,6 +31,7 @@ function makeActivity(id = 'story-1'): Activity {
 
 type FeedControlProps = {
   isSearchOpen: boolean;
+  isSearching: boolean;
   query: string;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -48,6 +49,7 @@ type FeedControlProps = {
 function makeFeedControlProps(overrides: Partial<FeedControlProps> = {}): FeedControlProps {
   return {
     isSearchOpen: false,
+    isSearching: false,
     query: '',
     onOpenSearch: jest.fn(),
     onCloseSearch: jest.fn(),
@@ -170,6 +172,17 @@ describe('FeedScreen', () => {
     expect(input).toBeOnTheScreen();
     expect(input.props.editable).not.toBe(false);
     expect(input.props.autoFocus).toBe(true);
+  });
+
+  it('shows search progress while placeholder results are visible', async () => {
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { isSearchOpen: true, isSearching: true },
+    );
+
+    expect(screen.getByLabelText('Searching stories')).toBeOnTheScreen();
   });
 
   it('clears the query and restores the wordmark when search is cancelled', async () => {

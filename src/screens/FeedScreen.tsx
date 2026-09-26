@@ -1,27 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View, type ListRenderItem } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import type { Activity, ActivityFilter } from '@/domain/activity';
 import type { FeedState } from '@/hooks/useActivities';
+import { useCollapsingHeader } from '@/hooks/useCollapsingHeader';
 import { spacing, useTheme } from '@/theme';
 
-import { FeedControls } from '@/components/FeedControls';
 import { FeedFooter } from '@/components/FeedFooter';
-import { FeedHeader } from '@/components/FeedHeader';
 import { FeedItem } from '@/components/FeedItem';
+import { FeedPinnedHeader } from '@/components/FeedPinnedHeader';
 import { StatusView } from '@/components/StatusView';
 
 interface FeedScreenProps {
   state: FeedState;
   isRefreshing: boolean;
+  isSearching: boolean;
   onRefresh: () => void;
   onPressActivity: (id: string) => void;
   isSearchOpen: boolean;
@@ -42,6 +37,7 @@ interface FeedScreenProps {
 export function FeedScreen({
   state,
   isRefreshing,
+  isSearching,
   onRefresh,
   onPressActivity,
   isSearchOpen,
@@ -62,80 +58,10 @@ export function FeedScreen({
   const insets = useSafeAreaInsets();
   const listRef = useRef<Animated.FlatList<Activity>>(null);
   const loadMoreInFlight = useRef(false);
-  const scrollY = useSharedValue(0);
-  const headerHeight = useSharedValue(0);
-  const collapseDistance = useSharedValue(0);
-  const measuredHeaderHeightRef = useRef(0);
-  const measuredWordmarkRowHeightRef = useRef(0);
-  const [measuredControlsHeight, setMeasuredControlsHeight] = useState(0);
-  const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState(0);
+  const collapsingHeader = useCollapsingHeader();
+  const { measuredControlsHeight, measuredHeaderHeight, onScroll } = collapsingHeader;
   const activities = state.status === 'ready' ? state.activities : [];
   const fetchedAt = state.status === 'ready' ? state.fetchedAt : undefined;
-
-  const handleControlsLayout = useCallback((event: LayoutChangeEvent) => {
-    setMeasuredControlsHeight(event.nativeEvent.layout.height);
-  }, []);
-
-  const handleHeaderLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const nextHeight = event.nativeEvent.layout.height;
-      if (nextHeight <= 0 || measuredHeaderHeightRef.current > 0) return;
-
-      measuredHeaderHeightRef.current = nextHeight;
-      headerHeight.set(nextHeight);
-      collapseDistance.set(Math.max(0, nextHeight - measuredWordmarkRowHeightRef.current));
-      setMeasuredHeaderHeight(nextHeight);
-    },
-    [collapseDistance, headerHeight],
-  );
-
-  const handleWordmarkRowLayout = useCallback(
-    (nextHeight: number) => {
-      if (nextHeight <= 0 || measuredWordmarkRowHeightRef.current === nextHeight) return;
-
-      measuredWordmarkRowHeightRef.current = nextHeight;
-      if (measuredHeaderHeightRef.current > 0) {
-        collapseDistance.set(Math.max(0, measuredHeaderHeightRef.current - nextHeight));
-      }
-    },
-    [collapseDistance],
-  );
-
-  const onScroll = useAnimatedScrollHandler((event) => {
-    scrollY.value = Math.max(0, event.contentOffset.y);
-  });
-
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    if (headerHeight.value === 0) return {};
-
-    const collapseRange = collapseDistance.value;
-    if (collapseRange <= 0) return { height: headerHeight.value };
-
-    const collapseOffset = interpolate(
-      scrollY.value,
-      [0, collapseRange],
-      [0, collapseRange],
-      Extrapolation.CLAMP,
-    );
-
-    return { height: headerHeight.value - collapseOffset };
-  });
-
-  const controlsAnimatedStyle = useAnimatedStyle(() => {
-    if (headerHeight.value === 0) return {};
-
-    const collapseRange = collapseDistance.value;
-    if (collapseRange <= 0) return { transform: [{ translateY: 0 }] };
-
-    const collapseOffset = interpolate(
-      scrollY.value,
-      [0, collapseRange],
-      [0, collapseRange],
-      Extrapolation.CLAMP,
-    );
-
-    return { transform: [{ translateY: -collapseOffset }] };
-  });
 
   useEffect(() => {
     listRef.current?.scrollToOffset({ animated: true, offset: 0 });
@@ -155,6 +81,11 @@ export function FeedScreen({
 
     requestMore();
   }, [activities.length, hasMore, requestMore]);
+
+  const renderItem = useCallback<ListRenderItem<Activity>>(
+    ({ item, index }) => <FeedItem activity={item} index={index} onPress={onPressActivity} />,
+    [onPressActivity],
+  );
 
   const emptyComponent = useMemo(() => {
     if (state.status === 'loading') return <StatusView kind="loading" />;
@@ -190,9 +121,7 @@ export function FeedScreen({
         ref={listRef}
         data={activities}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <FeedItem activity={item} index={index} onPress={onPressActivity} />
-        )}
+        renderItem={renderItem}
         ListEmptyComponent={emptyComponent}
         ListFooterComponent={
           <FeedFooter
@@ -223,53 +152,18 @@ export function FeedScreen({
         contentInsetAdjustmentBehavior="never"
         accessibilityLabel="Campus stories"
       />
-      <View
-        onLayout={handleHeaderLayout}
-        pointerEvents="box-none"
-        style={[
-          styles.headerMeasurement,
-          { height: measuredHeaderHeight || undefined, top: insets.top },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.collapsingHeader,
-            { backgroundColor: theme.colors.background },
-            headerAnimatedStyle,
-          ]}
-        >
-          <FeedHeader
-            collapseDistance={collapseDistance}
-            date={fetchedAt}
-            isSearchOpen={isSearchOpen}
-            onCloseSearch={onCloseSearch}
-            onOpenSearch={onOpenSearch}
-            onQueryChange={onQueryChange}
-            onRowLayout={handleWordmarkRowLayout}
-            query={query}
-            scrollY={scrollY}
-          />
-        </Animated.View>
-      </View>
-      <Animated.View
-        onLayout={handleControlsLayout}
-        style={[
-          styles.controls,
-          {
-            backgroundColor: theme.colors.background,
-            top: insets.top + measuredHeaderHeight,
-          },
-          controlsAnimatedStyle,
-        ]}
-      >
-        <FeedControls filter={filter} onFilterChange={onFilterChange} />
-      </Animated.View>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.statusBarBackground,
-          { backgroundColor: theme.colors.background, height: insets.top },
-        ]}
+      <FeedPinnedHeader
+        collapsingHeader={collapsingHeader}
+        date={fetchedAt}
+        filter={filter}
+        insetsTop={insets.top}
+        isSearching={isSearching}
+        isSearchOpen={isSearchOpen}
+        onCloseSearch={onCloseSearch}
+        onFilterChange={onFilterChange}
+        onOpenSearch={onOpenSearch}
+        onQueryChange={onQueryChange}
+        query={query}
       />
     </View>
   );
@@ -283,33 +177,6 @@ function FeedItemSeparator() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerMeasurement: {
-    left: 0,
-    position: 'absolute',
-    right: 0,
-  },
-  controls: {
-    left: 0,
-    paddingHorizontal: spacing.lg,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 2,
-  },
-  statusBarBackground: {
-    elevation: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 3,
-  },
-  collapsingHeader: {
-    overflow: 'hidden',
-    paddingHorizontal: spacing.lg,
-    width: '100%',
-    zIndex: 1,
-  },
   listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   emptyList: { flexGrow: 1 },
   separator: { height: StyleSheet.hairlineWidth },
