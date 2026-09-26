@@ -1,9 +1,20 @@
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import type { ReactNode } from 'react';
 
-import type { Activity } from '@/domain/activity';
+import type { Activity, ActivityFilter } from '@/domain/activity';
 import type { FeedState } from '@/hooks/useActivities';
 
 import { FeedScreen } from '../FeedScreen';
+
+const testMetrics = {
+  frame: { x: 0, y: 0, width: 320, height: 640 },
+  insets: { top: 0, right: 0, bottom: 0, left: 0 },
+};
+
+function TestSafeAreaProvider({ children }: { children: ReactNode }) {
+  return <SafeAreaProvider initialMetrics={testMetrics}>{children}</SafeAreaProvider>;
+}
 
 function makeActivity(id = 'story-1'): Activity {
   return {
@@ -18,14 +29,50 @@ function makeActivity(id = 'story-1'): Activity {
   };
 }
 
-function renderFeed(state: FeedState, onRefresh = jest.fn(), onPressActivity = jest.fn()) {
+type FeedControlProps = {
+  query: string;
+  filter: ActivityFilter;
+  onQueryChange: (query: string) => void;
+  onFilterChange: (filter: ActivityFilter) => void;
+  onLoadMore: () => Promise<void>;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  loadMoreError: string | null;
+  onClearSearch: () => void;
+  onShowAll: () => void;
+};
+
+function makeFeedControlProps(overrides: Partial<FeedControlProps> = {}): FeedControlProps {
+  return {
+    query: '',
+    filter: 'all',
+    onQueryChange: jest.fn(),
+    onFilterChange: jest.fn(),
+    onLoadMore: () => Promise.resolve(),
+    hasMore: false,
+    isLoadingMore: false,
+    loadMoreError: null,
+    onClearSearch: jest.fn(),
+    onShowAll: jest.fn(),
+    ...overrides,
+  };
+}
+
+function renderFeed(
+  state: FeedState,
+  onRefresh = jest.fn(),
+  onPressActivity = jest.fn(),
+  options: Partial<FeedControlProps> = {},
+) {
   return render(
     <FeedScreen
       state={state}
       isRefreshing={false}
       onRefresh={onRefresh}
       onPressActivity={onPressActivity}
+      {...makeFeedControlProps(options)}
     />,
+    { wrapper: TestSafeAreaProvider },
   );
 }
 
@@ -77,5 +124,104 @@ describe('FeedScreen', () => {
     const user = userEvent.setup();
     await user.press(screen.getByRole('button', { name: 'Campus story. Campus source' }));
     expect(onPressActivity).toHaveBeenCalledWith('story-1');
+  });
+
+  it('clears a non-empty search from the search field', async () => {
+    const onQueryChange = jest.fn();
+    await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
+      query: 'library',
+      onQueryChange,
+    });
+
+    expect(screen.getByDisplayValue('library')).toBeOnTheScreen();
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Clear search' }));
+    expect(onQueryChange).toHaveBeenCalledWith('');
+  });
+
+  it('reports tab selection and exposes the selected accessibility state', async () => {
+    const onFilterChange = jest.fn();
+    await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
+      filter: 'all',
+      onFilterChange,
+    });
+
+    const eventsTab = screen.getByRole('tab', { name: 'Events' });
+    expect(eventsTab.props.accessibilityState).toEqual({ selected: false });
+
+    const user = userEvent.setup();
+    await user.press(eventsTab);
+    expect(onFilterChange).toHaveBeenCalledWith('events');
+  });
+
+  it('keeps the search input mounted with its value while feed state changes', async () => {
+    const rendered = await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { query: 'library' },
+    );
+    const input = screen.getByTestId('feed-search-input');
+
+    rendered.rerender(
+      <FeedScreen
+        state={{ status: 'loading' }}
+        isRefreshing={false}
+        onRefresh={jest.fn()}
+        onPressActivity={jest.fn()}
+        {...makeFeedControlProps({ query: 'library' })}
+      />,
+    );
+
+    expect(screen.getByTestId('feed-search-input')).toBe(input);
+    expect(screen.getByDisplayValue('library')).toBeOnTheScreen();
+  });
+
+  it('renders the loading-more footer state', async () => {
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { isLoadingMore: true, hasMore: true },
+    );
+    expect(screen.getByLabelText('Loading more stories')).toBeOnTheScreen();
+  });
+
+  it('renders a retryable next-page footer error', async () => {
+    const onLoadMore = jest.fn().mockResolvedValue(undefined);
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { hasMore: true, loadMoreError: 'Network unavailable.', onLoadMore },
+    );
+    expect(screen.getByText("Couldn't load more stories")).toBeOnTheScreen();
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the end marker after the last page', async () => {
+    await renderFeed(
+      { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
+      jest.fn(),
+      jest.fn(),
+      { hasMore: false },
+    );
+    expect(screen.getByText("You're all caught up")).toBeOnTheScreen();
+  });
+
+  it.each([
+    [
+      { query: 'library', filter: 'all' as const, reason: 'no-results' as const },
+      'No results for "library"',
+    ],
+    [
+      { query: '', filter: 'events' as const, reason: 'no-results' as const },
+      'No events loaded yet',
+    ],
+  ])('uses the empty-state copy for %s', async (emptyState, title) => {
+    await renderFeed({ status: 'empty', ...emptyState });
+    expect(screen.getByText(title)).toBeOnTheScreen();
   });
 });

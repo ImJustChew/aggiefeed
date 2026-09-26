@@ -1,5 +1,6 @@
 import {
   infiniteQueryOptions,
+  keepPreviousData,
   queryOptions,
   useInfiniteQuery,
   useQuery,
@@ -79,6 +80,7 @@ function activitiesQueryOptions(query: string, enabled = true) {
         signal,
       }),
     initialPageParam: 0,
+    placeholderData: keepPreviousData,
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
       if (lastPage.length < ACTIVITY_PAGE_SIZE) return undefined;
 

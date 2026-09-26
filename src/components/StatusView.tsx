@@ -7,8 +7,15 @@ import { LoadingSkeleton } from './LoadingSkeleton';
 
 interface StatusViewProps {
   kind: 'loading' | 'error' | 'empty' | 'not-found';
+  title?: string;
   message?: string;
+  actions?: StatusAction[];
   onRetry?: () => void;
+}
+
+interface StatusAction {
+  label: string;
+  onPress: () => void;
 }
 
 const statusCopy = {
@@ -21,13 +28,16 @@ const statusCopy = {
   },
 };
 
-export function StatusView({ kind, message, onRetry }: StatusViewProps) {
+export function StatusView({ kind, title, message, actions, onRetry }: StatusViewProps) {
   const theme = useTheme();
   const copy = statusCopy[kind];
   const isLoading = kind === 'loading';
   const isError = kind === 'error';
+  const displayTitle = title ?? copy.title;
   const detail = message ?? copy.message;
   const actionLabel = isError ? 'Retry' : kind === 'empty' ? 'Refresh' : null;
+  const defaultActions = actionLabel && onRetry ? [{ label: actionLabel, onPress: onRetry }] : [];
+  const displayActions = actions ?? defaultActions;
 
   return (
     <View style={styles.container}>
@@ -36,21 +46,34 @@ export function StatusView({ kind, message, onRetry }: StatusViewProps) {
         accessible
         accessibilityRole={isLoading ? 'progressbar' : 'alert'}
         accessibilityLiveRegion={isError ? 'assertive' : 'polite'}
-        accessibilityLabel={`${copy.title}. ${detail}`}
+        accessibilityLabel={`${displayTitle}. ${detail}`}
       >
-        <Text style={[styles.title, { color: theme.colors.text }]}>{copy.title}</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>{displayTitle}</Text>
         <Text style={[styles.message, { color: theme.colors.textSecondary }]}>{detail}</Text>
       </View>
-      {actionLabel && onRetry ? (
+      {displayActions.map((action, index) => (
         <AnimatedPressable
           accessibilityRole="button"
-          accessibilityLabel={actionLabel}
-          onPress={onRetry}
-          style={[styles.retry, { backgroundColor: theme.colors.accent }]}
+          accessibilityLabel={action.label}
+          key={action.label}
+          onPress={action.onPress}
+          style={[
+            styles.retry,
+            index > 0
+              ? { borderColor: theme.colors.hairline, borderWidth: StyleSheet.hairlineWidth }
+              : { backgroundColor: theme.colors.accent },
+          ]}
         >
-          <Text style={[styles.retryText, { color: theme.colors.accentText }]}>{actionLabel}</Text>
+          <Text
+            style={[
+              styles.retryText,
+              { color: index > 0 ? theme.colors.text : theme.colors.accentText },
+            ]}
+          >
+            {action.label}
+          </Text>
         </AnimatedPressable>
-      ) : null}
+      ))}
     </View>
   );
 }

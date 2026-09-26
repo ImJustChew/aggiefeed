@@ -86,6 +86,41 @@ describe('activity hooks', () => {
     expect(queryClient.getQueryData(['activities', { query: 'tennis' }])).toBeDefined();
   });
 
+  it('keeps the previous results visible while a new search is loading', async () => {
+    const previousActivity = activity('previous');
+    mockedFetchActivities.mockResolvedValueOnce([previousActivity]);
+
+    const { result, rerender } = await renderHook(
+      ({ query }: { query: string }) => useFeed({ query }),
+      { initialProps: { query: '' }, wrapper: wrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+
+    let resolveSearch: (activities: Activity[]) => void = () => undefined;
+    const searchPromise = new Promise<Activity[]>((resolve) => {
+      resolveSearch = resolve;
+    });
+    mockedFetchActivities.mockReturnValueOnce(searchPromise);
+
+    await rerender({ query: 'new search' });
+
+    expect(result.current.state).toEqual({
+      status: 'ready',
+      activities: [previousActivity],
+      fetchedAt: expect.any(Date),
+    });
+    expect(mockedFetchActivities).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: 'new search', skip: 0, limit: 25 }),
+    );
+
+    await act(async () => {
+      resolveSearch([activity('new-result')]);
+      await searchPromise;
+    });
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+  });
+
   it('distinguishes an empty feed from no results for a filter or search', async () => {
     mockedFetchActivities.mockResolvedValueOnce([]);
     const emptyFeed = await renderHook(() => useFeed(), { wrapper: wrapper(queryClient) });
