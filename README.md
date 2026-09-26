@@ -1,9 +1,10 @@
 # AggieFeed
 
-AggieFeed is an Expo and React Native app that loads up to 25 public AggieFeed
-activities, displays them in a list, and opens a detail screen for each activity.
-The feed includes campus news and events. The app handles loading, empty, error,
-retry, missing-field, and not-found states.
+AggieFeed is an Expo and React Native app that loads public AggieFeed activities,
+displays them in an editorial list, and opens a detail screen for each activity.
+The feed includes campus news and events, with debounced search, type tabs,
+infinite scroll, pull-to-refresh, and clear loading, empty, error, retry,
+missing-field, and not-found states.
 
 ## Requirements
 
@@ -70,7 +71,8 @@ bun run format
 
 - Expo SDK 57 — React Native runtime and Expo development tooling.
 - Expo Router — file-based navigation for the feed and activity routes.
-- TanStack Query — request state, caching, retry, and pull-to-refresh refetches.
+- TanStack Query — request state, caching, retry, placeholder results during
+  search, infinite pages, and pull-to-refresh refetches.
 - Reanimated 4 — press and entrance motion with reduced-motion support.
 - `expo-font` + Inter — startup-loaded application typography.
 - `expo-web-browser` — opens the original story or event URL.
@@ -87,12 +89,12 @@ src/
 │   └── __tests__/       API request and response tests
 ├── app/                 Expo Router route containers
 │   └── activity/        Activity detail route
-├── components/          Reusable presentational feed and status components
+├── components/          Presentational header, search, tabs, feed, and status components
 │   └── __tests__/       Component tests
 ├── domain/              Normalized activity model and pure parsing helpers
 │   ├── __tests__/       Date, text, and normalization tests
 │   └── fixtures/        Test feed data
-├── hooks/               React Query hooks and view-state unions
+├── hooks/               React Query hooks, view-state unions, and debouncing
 │   └── __tests__/       Hook state and cache tests
 ├── lib/                 Shared infrastructure such as the QueryClient
 ├── screens/             Presentational feed and detail screens
@@ -102,15 +104,19 @@ src/
 ```
 
 The layering is `api` (HTTP + wire types) → `domain` (normalization, pure) →
-`hooks` (React Query → small view-state unions, user-facing error copy) →
-`screens/components` (presentational) ← app routes (thin containers: hooks +
-navigation + side effects).
+`hooks` (React Query, infinite pages, and small view-state unions) →
+`screens/components` (presentational) ← app routes (search/filter state, hooks,
+navigation, and side effects).
 
 ## Data notes
 
 The endpoint returns a top-level JSON array of Activity Streams-style objects.
 The array mixes `notification` items, treated as news, and `event` items. The
-request is fixed to `s=0&l=25`.
+first request is `s=0&l=25`. Infinite scroll requests another 25 activities per
+page. The server caps `s` at 4000 and `l` at 500; this app keeps its page size
+at 25. Search is sent to the server as `q`. News and Events tabs are client-side
+filters because the server has no type filter. Sparse filtered tabs auto-fill
+from later pages, capped at four additional page requests.
 
 - The API and domain parser treat the response as untrusted JSON. The top-level
   value must be an array; non-object entries are skipped and missing or mistyped
@@ -133,8 +139,11 @@ request is fixed to `s=0&l=25`.
 - The detail screen looks up an activity by id in the shared query cache rather
   than passing the full object through route params. This supports deep links;
   a cold cache refetches the feed before showing the detail.
-- There is no pagination or infinite scroll because the specification fixes the
-  request to `l=25`.
+- The app stops requesting pages when a short page is returned or when the
+  server-side skip cap is reached. Sparse News or Events results may therefore
+  contain fewer than the requested amount after the four-page auto-fill limit.
+- Search uses the server's full-text `q` parameter after a short input debounce;
+  type tabs filter the normalized results locally.
 - Published and event times use the device's local time zone.
 - `objectType` is shown with its raw value formatted as a label in Details,
   while the top of the screen uses a friendlier label such as News or Event.
@@ -143,6 +152,8 @@ request is fixed to `s=0&l=25`.
 ## Optional enhancements implemented
 
 - Pull-to-refresh on the feed.
+- Infinite scroll with loading, retry, and end-of-feed footer states.
+- Debounced server search and client-side News / Events tabs.
 - Retry actions for failed requests and empty feeds.
 - Relative and absolute date formatting.
 - Unit, hook, screen, component, and API tests.
@@ -154,11 +165,12 @@ request is fixed to `s=0&l=25`.
 ## Known issues and limitations
 
 - There is no offline persistence; the React Query cache is in memory.
-- There is no pagination or infinite scroll.
 - HTML content is flattened to plain text. Links inside summaries are not
   tappable; `Read full story` opens the original URL when one is available.
 - Duplicate stories can appear twice when the API returns them from different
   sources.
+- The API does not expose a type filter, so News and Events filtering is
+  client-side and sparse tabs stop after four auto-fill pages.
 - The app has not been tested on a physical iOS device. Validation was done on
   an Android emulator and with unit/component tests.
 
