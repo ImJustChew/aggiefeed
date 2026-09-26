@@ -1,5 +1,6 @@
 import {
   formatDate,
+  formatDateRange,
   formatDateTime,
   formatRelative,
   formatShortDate,
@@ -21,6 +22,23 @@ describe('date helpers', () => {
     expect(formatDate(date)).toBe('Thu, Sep 24, 2026');
     expect(formatDateTime(date)).toBe('Thu, Sep 24, 2026 · 10:00 PM');
     expect(formatShortDate(date)).toBe('Thu, Sep 24');
+  });
+
+  it('formats same-day ranges without repeating the date', () => {
+    const date = new Date('2026-09-27T00:00:00Z');
+
+    expect(formatDateRange(date, new Date('2026-09-27T02:00:00Z'))).toBe(
+      'Sun, Sep 27, 2026 · 12:00 – 2:00 AM',
+    );
+    expect(
+      formatDateRange(new Date('2026-09-27T11:00:00Z'), new Date('2026-09-27T13:00:00Z')),
+    ).toBe('Sun, Sep 27, 2026 · 11:00 AM – 1:00 PM');
+  });
+
+  it('keeps both dates for multi-day ranges', () => {
+    expect(
+      formatDateRange(new Date('2026-09-27T23:00:00Z'), new Date('2026-09-28T01:00:00Z')),
+    ).toBe('Sun, Sep 27, 2026 · 11:00 PM – Mon, Sep 28, 2026 · 1:00 AM');
   });
 
   it('uses relative formatting for recent dates and an absolute date otherwise', () => {

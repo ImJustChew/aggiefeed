@@ -1,5 +1,11 @@
 import type { Activity } from '@/domain/activity';
-import { formatDate, formatDateTime, formatRelative, formatShortDate } from '@/domain/date';
+import {
+  formatDate,
+  formatDateRange,
+  formatDateTime,
+  formatRelative,
+  formatShortDate,
+} from '@/domain/date';
 
 export const fallbackCopy = {
   title: 'Untitled',
@@ -67,7 +73,7 @@ export function displayEventWhen(activity: Activity): string {
   if (event === null || event.start === null) return fallbackCopy.date;
   if (event.isAllDay || event.end === null) return formatDate(event.start);
 
-  return `${formatDateTime(event.start)} – ${formatDateTime(event.end)}`;
+  return formatDateRange(event.start, event.end);
 }
 
 export function displayEventLocation(activity: Activity): string {

@@ -31,6 +31,26 @@ export function formatDateTime(date: Date): string {
   return `${formatDate(date)} · ${time}`;
 }
 
+function formatTime(date: Date, includeMeridiem: boolean): string {
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return includeMeridiem ? time : time.replace(/\s(AM|PM)$/, '');
+}
+
+function isSameLocalDay(start: Date, end: Date): boolean {
+  return (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate()
+  );
+}
+
+export function formatDateRange(start: Date, end: Date): string {
+  if (!isSameLocalDay(start, end)) return `${formatDateTime(start)} – ${formatDateTime(end)}`;
+
+  const sameMeridiem = start.getHours() < 12 === end.getHours() < 12;
+  return `${formatDate(start)} · ${formatTime(start, !sameMeridiem)} – ${formatTime(end, true)}`;
+}
+
 export function formatRelative(date: Date, now: Date): string {
   const elapsed = now.getTime() - date.getTime();
   if (elapsed < MINUTE) return 'Just now';
