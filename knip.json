@@ -2,5 +2,5 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/app/**/*.tsx"],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignoreDependencies": ["react-dom", "react-native-web", "react-native-worklets", "test-renderer"]
+  "ignoreDependencies": ["expo-updates"]
 }
