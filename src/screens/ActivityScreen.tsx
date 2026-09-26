@@ -17,6 +17,7 @@ import {
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { AnimatedReveal } from '@/components/AnimatedReveal';
+import { RichText } from '@/components/RichText';
 import { StatusView } from '@/components/StatusView';
 
 interface ActivityScreenProps {
@@ -85,9 +86,15 @@ export function ActivityScreen({ state, onRetry, onOpenUrl }: ActivityScreenProp
         ) : null}
 
         <AnimatedReveal delay={120} style={styles.bodyBlock}>
-          <Text style={[styles.body, { color: theme.colors.text }]}>
-            {activity.summary ?? fallbackCopy.summary}
-          </Text>
+          {activity.summarySegments !== null ? (
+            <RichText
+              onPressLink={onOpenUrl}
+              segments={activity.summarySegments}
+              style={[styles.body, { color: theme.colors.text }]}
+            />
+          ) : (
+            <Text style={[styles.body, { color: theme.colors.text }]}>{fallbackCopy.summary}</Text>
+          )}
           {storyUrl ? (
             <AnimatedPressable
               accessibilityRole="button"

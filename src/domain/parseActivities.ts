@@ -2,7 +2,9 @@ import type { ApiActivity } from '@/api/types';
 
 import type { Activity, ActivityEvent } from './activity';
 import { parseDate } from './date';
+import { parseRichText } from './richText';
 import { cleanText, htmlToPlainText } from './text';
+import { parseHttpUrl } from './url';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -53,7 +55,8 @@ function toActivity(raw: ApiActivity, index: number, skip: number): Activity {
     objectType: cleanText(object === null ? null : stringValue(object.objectType)),
     published: parseDate(raw.published),
     summary: htmlToPlainText(object === null ? null : stringValue(object.content)),
-    url: nonBlankString(model === null ? null : model.url),
+    summarySegments: parseRichText(object === null ? null : stringValue(object.content)),
+    url: parseHttpUrl(model === null ? null : stringValue(model.url)),
     event: object === null ? null : toEvent(object),
   };
 }

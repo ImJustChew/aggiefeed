@@ -1,3 +1,5 @@
+import type { RichSegment } from './richText';
+
 export interface ActivityEvent {
   start: Date | null;
   end: Date | null;
@@ -13,6 +15,7 @@ export interface Activity {
   objectType: string | null;
   published: Date | null;
   summary: string | null;
+  summarySegments: RichSegment[] | null;
   url: string | null;
   event: ActivityEvent | null;
 }

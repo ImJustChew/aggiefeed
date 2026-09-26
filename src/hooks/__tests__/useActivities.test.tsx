@@ -28,6 +28,7 @@ function activity(id: string, objectType = 'notification'): Activity {
     objectType,
     published: new Date('2026-09-25T12:00:00Z'),
     summary: null,
+    summarySegments: null,
     url: null,
     event: null,
   };

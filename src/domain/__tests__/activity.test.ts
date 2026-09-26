@@ -9,6 +9,7 @@ function activity(id: string, objectType: string | null = 'notification'): Activ
     objectType,
     published: null,
     summary: null,
+    summarySegments: null,
     url: null,
     event: null,
   };

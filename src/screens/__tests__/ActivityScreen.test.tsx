@@ -16,6 +16,9 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
     url: null,
     event: null,
     ...overrides,
+    summarySegments:
+      overrides.summarySegments ??
+      (overrides.summary === null ? null : [{ kind: 'text', text: 'A story summary.' }]),
   };
 }
 

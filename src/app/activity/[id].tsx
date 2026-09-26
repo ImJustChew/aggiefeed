@@ -11,7 +11,11 @@ export default function ActivityRoute() {
   const id = Array.isArray(rawId) ? (rawId[0] ?? '') : (rawId ?? '');
   const { state, reload } = useActivity(id);
   const openUrl = useCallback(async (url: string) => {
-    await WebBrowser.openBrowserAsync(url);
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch {
+      return;
+    }
   }, []);
 
   return <ActivityScreen state={state} onRetry={reload} onOpenUrl={openUrl} />;

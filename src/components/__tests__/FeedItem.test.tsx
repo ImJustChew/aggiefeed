@@ -15,6 +15,7 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
     url: null,
     event: null,
     ...overrides,
+    summarySegments: overrides.summarySegments ?? null,
   };
 }
 

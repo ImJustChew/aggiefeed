@@ -14,6 +14,13 @@ describe('parseActivities', () => {
       objectType: 'notification',
       summary:
         "Research can help life-saving therapies travel farther—You'll learn more. Read the story",
+      summarySegments: [
+        {
+          kind: 'text',
+          text: "Research can help life-saving therapies travel farther—You'll learn more. ",
+        },
+        { kind: 'link', text: 'Read the story', url: 'https://example.com/story' },
+      ],
       url: 'https://example.com/story',
     });
     expect(activities[1]?.event).toMatchObject({
@@ -29,6 +36,7 @@ describe('parseActivities', () => {
       objectType: null,
       published: null,
       summary: null,
+      summarySegments: null,
       url: null,
       event: null,
     });
@@ -71,6 +79,7 @@ describe('parseActivities', () => {
       objectType: null,
       published: null,
       summary: null,
+      summarySegments: null,
       url: null,
       event: {
         start: null,
@@ -93,5 +102,19 @@ describe('parseActivities', () => {
       'activity-0',
       'activity-25',
     ]);
+  });
+
+  it('drops unsafe activity URLs', () => {
+    const [activity] = parseActivities([
+      { object: { ucdEdusModel: { url: 'javascript:alert(1)' } } },
+      { object: { ucdEdusModel: { url: '/story' } } },
+      { object: { ucdEdusModel: { url: 'https://example.com/story' } } },
+    ]);
+
+    expect(activity?.url).toBeNull();
+    expect(parseActivities([{ object: { ucdEdusModel: { url: '/story' } } }])[0]?.url).toBeNull();
+    expect(
+      parseActivities([{ object: { ucdEdusModel: { url: 'https://example.com/story' } } }])[0]?.url,
+    ).toBe('https://example.com/story');
   });
 });
