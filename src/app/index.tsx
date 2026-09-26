@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { BackHandler } from 'react-native';
 
 import type { ActivityFilter } from '@/domain/activity';
@@ -34,16 +34,18 @@ export default function FeedRoute() {
     setFilter('all');
   }, []);
 
-  useEffect(() => {
-    if (!isSearchOpen) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!isSearchOpen) return undefined;
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      closeSearch();
-      return true;
-    });
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        closeSearch();
+        return true;
+      });
 
-    return () => subscription.remove();
-  }, [closeSearch, isSearchOpen]);
+      return () => subscription.remove();
+    }, [closeSearch, isSearchOpen]),
+  );
 
   const onPressActivity = useCallback((id: string) => {
     router.push({ pathname: '/activity/[id]', params: { id } });

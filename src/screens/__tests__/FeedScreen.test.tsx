@@ -24,6 +24,7 @@ function makeActivity(id = 'story-1'): Activity {
     objectType: 'notification',
     published: null,
     summary: 'A story summary.',
+    summarySegments: [{ kind: 'text', text: 'A story summary.' }],
     url: null,
     event: null,
   };
@@ -294,5 +295,21 @@ describe('FeedScreen', () => {
   ])('uses the empty-state copy for %s', async (emptyState, title) => {
     await renderFeed({ status: 'empty', ...emptyState });
     expect(screen.getByText(title)).toBeOnTheScreen();
+  });
+
+  it('offers load more when an empty filter still has another page', async () => {
+    const onLoadMore = jest.fn().mockResolvedValue(undefined);
+    await renderFeed(
+      { status: 'empty', query: '', filter: 'events', reason: 'no-results' },
+      jest.fn(),
+      jest.fn(),
+      { hasMore: true, onLoadMore },
+    );
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Load more' }));
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Show all' })).toBeOnTheScreen();
   });
 });

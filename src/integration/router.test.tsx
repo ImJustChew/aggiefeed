@@ -35,6 +35,7 @@ const routeActivity: Activity = {
   objectType: 'notification',
   published: new Date('2026-09-25T12:00:00Z'),
   summary: 'A route test story.',
+  summarySegments: [{ kind: 'text', text: 'A route test story.' }],
   url: null,
   event: null,
 };

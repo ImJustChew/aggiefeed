@@ -111,9 +111,10 @@ export function FeedScreen({
     const actions = [];
     if (state.query) actions.push({ label: 'Clear search', onPress: onClearSearch });
     if (state.filter !== 'all') actions.push({ label: 'Show all', onPress: onShowAll });
+    if (hasMore) actions.push({ label: 'Load more', onPress: onLoadMore });
 
     return <StatusView kind="empty" title={title} message={message} actions={actions} />;
-  }, [onClearSearch, onRefresh, onShowAll, state]);
+  }, [hasMore, onClearSearch, onLoadMore, onRefresh, onShowAll, state]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
