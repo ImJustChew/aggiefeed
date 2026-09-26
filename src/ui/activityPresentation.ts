@@ -1,3 +1,4 @@
+import { isEvent } from '@/domain/activity';
 import type { Activity } from '@/domain/activity';
 import {
   formatDate,
@@ -86,6 +87,4 @@ export function formatFeedDate(date = new Date()): string {
     .toUpperCase();
 }
 
-export function isEvent(activity: Activity): boolean {
-  return activity.event !== null || activity.objectType?.toLowerCase() === 'event';
-}
+export { isEvent };

@@ -16,3 +16,32 @@ export interface Activity {
   url: string | null;
   event: ActivityEvent | null;
 }
+
+export type ActivityFilter = 'all' | 'news' | 'events';
+
+export function isEvent(activity: Activity): boolean {
+  return activity.event !== null || activity.objectType?.toLowerCase() === 'event';
+}
+
+export function filterActivities(activities: Activity[], filter: ActivityFilter): Activity[] {
+  if (filter === 'all') return activities;
+
+  return activities.filter((activity) =>
+    filter === 'events' ? isEvent(activity) : !isEvent(activity),
+  );
+}
+
+export function flattenActivities(pages: Activity[][]): Activity[] {
+  const seen = new Set<string>();
+  const flattened: Activity[] = [];
+
+  for (const page of pages) {
+    for (const activity of page) {
+      if (seen.has(activity.id)) continue;
+      seen.add(activity.id);
+      flattened.push(activity);
+    }
+  }
+
+  return flattened;
+}
