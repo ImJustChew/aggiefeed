@@ -40,11 +40,6 @@ export function FeedItem({ activity, index, onPress }: FeedItemProps) {
             {source} · {displayRelativePublished(activity.published)}
           </Text>
         </View>
-        {event ? (
-          <Text style={[styles.eventLabel, { color: theme.colors.highlight }]}>
-            {displayActivityType(activity)} · {displayEventStart(activity)}
-          </Text>
-        ) : null}
         <Text
           style={[styles.title, { color: theme.colors.text }]}
           numberOfLines={3}
@@ -59,6 +54,11 @@ export function FeedItem({ activity, index, onPress }: FeedItemProps) {
             ellipsizeMode="tail"
           >
             {activity.summary}
+          </Text>
+        ) : null}
+        {event ? (
+          <Text style={[styles.eventLabel, { color: theme.colors.highlight }]}>
+            {displayActivityType(activity)} · {displayEventStart(activity)}
           </Text>
         ) : null}
       </AnimatedPressable>
