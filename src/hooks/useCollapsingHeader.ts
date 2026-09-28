@@ -8,6 +8,12 @@ import {
   useSharedValue,
 } from 'react-native-reanimated';
 
+export function getCollapseOffset(scrollY: number, range: number): number {
+  'worklet';
+
+  return interpolate(scrollY, [0, range], [0, range], Extrapolation.CLAMP);
+}
+
 export function useCollapsingHeader() {
   const scrollY = useSharedValue(0);
   const headerHeight = useSharedValue(0);
@@ -59,12 +65,7 @@ export function useCollapsingHeader() {
     const collapseRange = collapseDistance.value;
     if (collapseRange <= 0) return { height: headerHeight.value };
 
-    const collapseOffset = interpolate(
-      scrollY.value,
-      [0, collapseRange],
-      [0, collapseRange],
-      Extrapolation.CLAMP,
-    );
+    const collapseOffset = getCollapseOffset(scrollY.value, collapseRange);
 
     return { height: headerHeight.value - collapseOffset };
   });
@@ -75,12 +76,7 @@ export function useCollapsingHeader() {
     const collapseRange = collapseDistance.value;
     if (collapseRange <= 0) return { transform: [{ translateY: 0 }] };
 
-    const collapseOffset = interpolate(
-      scrollY.value,
-      [0, collapseRange],
-      [0, collapseRange],
-      Extrapolation.CLAMP,
-    );
+    const collapseOffset = getCollapseOffset(scrollY.value, collapseRange);
 
     return { transform: [{ translateY: -collapseOffset }] };
   });

@@ -10,6 +10,7 @@ import type { SharedValue } from 'react-native-reanimated';
 
 import { fonts, spacing, useTheme } from '@/theme';
 import { formatFeedDate } from '@/ui/activityPresentation';
+import { getCollapseOffset } from '@/hooks/useCollapsingHeader';
 
 import { AnimatedReveal } from './AnimatedReveal';
 import { FeedSearchRow } from './FeedSearchRow';
@@ -60,7 +61,7 @@ export function FeedHeader({
       return { opacity: 1, transform: [{ translateY: 0 }] };
     }
 
-    const offset = interpolate(activeScrollY.value, [0, range], [0, range], Extrapolation.CLAMP);
+    const offset = getCollapseOffset(activeScrollY.value, range);
 
     return {
       opacity: interpolate(offset, [0, range * 0.45], [1, 0], Extrapolation.CLAMP),
@@ -72,7 +73,7 @@ export function FeedHeader({
     const range = activeCollapseDistance.value;
     if (range <= 0) return { transform: [{ translateY: 0 }] };
 
-    const offset = interpolate(activeScrollY.value, [0, range], [0, range], Extrapolation.CLAMP);
+    const offset = getCollapseOffset(activeScrollY.value, range);
 
     return { transform: [{ translateY: -Math.min(offset, rowOffset) }] };
   }, [rowOffset]);
@@ -83,7 +84,7 @@ export function FeedHeader({
       return { opacity: 1, transform: [{ translateY: 0 }] };
     }
 
-    const offset = interpolate(activeScrollY.value, [0, range], [0, range], Extrapolation.CLAMP);
+    const offset = getCollapseOffset(activeScrollY.value, range);
 
     return {
       opacity: interpolate(offset, [0, range * 0.7], [1, 0], Extrapolation.CLAMP),
