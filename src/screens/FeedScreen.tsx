@@ -57,7 +57,6 @@ export function FeedScreen({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const listRef = useRef<Animated.FlatList<Activity>>(null);
-  const loadMoreInFlight = useRef(false);
   const collapsingHeader = useCollapsingHeader();
   const { measuredControlsHeight, measuredHeaderHeight, onScroll } = collapsingHeader;
   const activities = state.status === 'ready' ? state.activities : [];
@@ -67,20 +66,11 @@ export function FeedScreen({
     listRef.current?.scrollToOffset({ animated: true, offset: 0 });
   }, [filter]);
 
-  const requestMore = useCallback(() => {
-    if (loadMoreInFlight.current || isLoadingMore) return;
-
-    loadMoreInFlight.current = true;
-    void Promise.resolve(onLoadMore()).finally(() => {
-      loadMoreInFlight.current = false;
-    });
-  }, [isLoadingMore, onLoadMore]);
-
   const handleEndReached = useCallback(() => {
     if (!hasMore || activities.length === 0) return;
 
-    requestMore();
-  }, [activities.length, hasMore, requestMore]);
+    void onLoadMore();
+  }, [activities.length, hasMore, onLoadMore]);
 
   const renderItem = useCallback<ListRenderItem<Activity>>(
     ({ item, index }) => <FeedItem activity={item} index={index} onPress={onPressActivity} />,
@@ -130,7 +120,7 @@ export function FeedScreen({
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             loadMoreError={loadMoreError}
-            onRetry={requestMore}
+            onRetry={onLoadMore}
           />
         }
         ItemSeparatorComponent={FeedItemSeparator}

@@ -272,16 +272,13 @@ describe('FeedScreen', () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    ['there is no next page', false, false],
-    ['another page is already loading', true, true],
-  ])('does not load another page when %s', async (_reason, hasMore, isLoadingMore) => {
+  it('does not load another page when there is no next page', async () => {
     const onLoadMore = jest.fn().mockResolvedValue(undefined);
     await renderFeed(
       { status: 'ready', activities: [makeActivity()], fetchedAt: new Date() },
       jest.fn(),
       jest.fn(),
-      { hasMore, isLoadingMore, onLoadMore },
+      { hasMore: false, isLoadingMore: false, onLoadMore },
     );
 
     await fireEvent(screen.getByLabelText('Campus stories'), 'onEndReached');

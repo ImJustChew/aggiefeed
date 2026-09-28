@@ -302,6 +302,36 @@ describe('activity hooks', () => {
     );
   });
 
+  it('reuses an in-flight next-page request when loadMore is called twice', async () => {
+    let resolveNextPage: (activities: Activity[]) => void = () => undefined;
+    const nextPagePromise = new Promise<Activity[]>((resolve) => {
+      resolveNextPage = resolve;
+    });
+    mockedFetchActivities.mockResolvedValueOnce(page(0)).mockReturnValueOnce(nextPagePromise);
+
+    const { result } = await renderHook(() => useFeed(), {
+      wrapper: wrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.state.status).toBe('ready'));
+
+    let loadMorePromises: [Promise<void>, Promise<void>] | undefined;
+    await act(async () => {
+      loadMorePromises = [result.current.loadMore(), result.current.loadMore()];
+      await Promise.resolve();
+    });
+
+    expect(mockedFetchActivities).toHaveBeenCalledTimes(2);
+    expect(mockedFetchActivities).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ skip: 25, limit: 25 }),
+    );
+
+    await act(async () => {
+      resolveNextPage(page(25));
+      await Promise.all(loadMorePromises ?? []);
+    });
+  });
+
   it('stops requesting after the API returns a short page', async () => {
     mockedFetchActivities.mockResolvedValueOnce(page(0)).mockResolvedValueOnce([activity('tail')]);
 
@@ -551,7 +581,7 @@ describe('activity hooks', () => {
     });
     mockedFetchActivities.mockReturnValueOnce(retryPromise);
 
-    let reload: Promise<void> | undefined;
+    let reload: ReturnType<typeof result.current.reload> | undefined;
     await act(async () => {
       reload = result.current.reload();
       await Promise.resolve();

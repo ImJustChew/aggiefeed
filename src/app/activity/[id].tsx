@@ -6,16 +6,10 @@ import { ActivityScreen } from '@/screens/ActivityScreen';
 import { useActivity } from '@/hooks/useActivities';
 
 export default function ActivityRoute() {
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const rawId = params.id;
-  const id = Array.isArray(rawId) ? (rawId[0] ?? '') : (rawId ?? '');
-  const { state, reload } = useActivity(id);
-  const openUrl = useCallback(async (url: string) => {
-    try {
-      await WebBrowser.openBrowserAsync(url);
-    } catch {
-      return;
-    }
+  const params = useLocalSearchParams<{ id: string }>();
+  const { state, reload } = useActivity(params.id);
+  const openUrl = useCallback((url: string): void => {
+    void WebBrowser.openBrowserAsync(url).catch(() => undefined);
   }, []);
 
   return <ActivityScreen state={state} onRetry={reload} onOpenUrl={openUrl} />;

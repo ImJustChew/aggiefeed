@@ -92,8 +92,7 @@ function activitiesQueryOptions(query: string) {
 export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
   const queryClient = useQueryClient();
   const normalizedQuery = query.trim();
-  const queryKey = useMemo(() => activitiesQueryKey(normalizedQuery), [normalizedQuery]);
-  const queryOptions = useMemo(() => activitiesQueryOptions(normalizedQuery), [normalizedQuery]);
+  const listQuery = activitiesQueryOptions(normalizedQuery);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const autoFill = useRef({ key: '', count: 0 });
   const {
@@ -108,7 +107,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
     fetchNextPage,
     dataUpdatedAt,
     refetch,
-  } = useInfiniteQuery(queryOptions);
+  } = useInfiniteQuery(listQuery);
 
   const allActivities = useMemo(() => flattenActivities(data?.pages ?? []), [data]);
   const activities = useMemo(
@@ -120,10 +119,10 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
   const isSearching = isFetching && isPlaceholderData;
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || isFetchingNextPage) return;
+    if (!hasMore) return;
 
-    await fetchNextPage();
-  }, [fetchNextPage, hasMore, isFetchingNextPage]);
+    await fetchNextPage({ cancelRefetch: false });
+  }, [fetchNextPage, hasMore]);
 
   useEffect(() => {
     const key = `${normalizedQuery}\u0000${filter}`;
@@ -134,9 +133,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
     if (
       activities.length >= SPARSE_FILTER_THRESHOLD ||
       !hasMore ||
-      isPending ||
       isFetching ||
-      isFetchingNextPage ||
       autoFill.current.count >= AUTO_FILL_LIMIT
     ) {
       return;
@@ -144,22 +141,12 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
 
     autoFill.current.count += 1;
     void loadMore();
-  }, [
-    activities.length,
-    dataUpdatedAt,
-    filter,
-    hasMore,
-    isFetching,
-    isFetchingNextPage,
-    isPending,
-    loadMore,
-    normalizedQuery,
-  ]);
+  }, [activities.length, dataUpdatedAt, filter, hasMore, isFetching, loadMore, normalizedQuery]);
 
   const reload = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      queryClient.setQueryData<ActivitiesQueryData>(queryKey, (current) => {
+      queryClient.setQueryData<ActivitiesQueryData>(listQuery.queryKey, (current) => {
         if (current === undefined || current.pages.length <= 1) return current;
 
         return {
@@ -172,7 +159,7 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [queryClient, queryKey, refetch]);
+  }, [listQuery.queryKey, queryClient, refetch]);
 
   let state: FeedState;
   if (data !== undefined) {
@@ -254,9 +241,5 @@ export function useActivity(id: string) {
     state = { status: 'error', message: toErrorMessage(error) };
   }
 
-  const reload = useCallback(async () => {
-    await refetch();
-  }, [refetch]);
-
-  return { state, reload };
+  return { state, reload: refetch };
 }
