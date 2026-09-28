@@ -11,48 +11,38 @@ import { spacing, useTheme } from '@/theme';
 import { FeedFooter } from '@/components/FeedFooter';
 import { FeedItem } from '@/components/FeedItem';
 import { FeedPinnedHeader } from '@/components/FeedPinnedHeader';
+import type { FeedSearch } from '@/components/FeedSearchRow';
 import { StatusView } from '@/components/StatusView';
 
-interface FeedScreenProps {
-  state: FeedState;
-  isRefreshing: boolean;
-  isSearching: boolean;
-  onRefresh: () => void;
-  onPressActivity: (id: string) => void;
-  isSearchOpen: boolean;
-  onOpenSearch: () => void;
-  onCloseSearch: () => void;
-  query: string;
-  filter: ActivityFilter;
-  onQueryChange: (query: string) => void;
-  onFilterChange: (filter: ActivityFilter) => void;
-  onLoadMore: () => Promise<void>;
+export interface FeedPagination {
   hasMore: boolean;
   isLoadingMore: boolean;
   loadMoreError: string | null;
-  onClearSearch: () => void;
+  onLoadMore: () => Promise<void>;
+}
+
+interface FeedScreenProps {
+  state: FeedState;
+  filter: ActivityFilter;
+  onFilterChange: (filter: ActivityFilter) => void;
+  isRefreshing: boolean;
+  onRefresh: () => void;
   onShowAll: () => void;
+  onPressActivity: (id: string) => void;
+  search: FeedSearch;
+  pagination: FeedPagination;
 }
 
 export function FeedScreen({
   state,
-  isRefreshing,
-  isSearching,
-  onRefresh,
-  onPressActivity,
-  isSearchOpen,
-  onOpenSearch,
-  onCloseSearch,
-  query,
   filter,
-  onQueryChange,
   onFilterChange,
-  onLoadMore,
-  hasMore,
-  isLoadingMore,
-  loadMoreError,
-  onClearSearch,
+  isRefreshing,
+  onRefresh,
   onShowAll,
+  onPressActivity,
+  search,
+  pagination,
 }: FeedScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -61,6 +51,7 @@ export function FeedScreen({
   const { measuredControlsHeight, measuredHeaderHeight, onScroll } = collapsingHeader;
   const activities = state.status === 'ready' ? state.activities : [];
   const fetchedAt = state.status === 'ready' ? state.fetchedAt : undefined;
+  const { hasMore, isLoadingMore, loadMoreError, onLoadMore } = pagination;
 
   useEffect(() => {
     listRef.current?.scrollToOffset({ animated: true, offset: 0 });
@@ -99,12 +90,12 @@ export function FeedScreen({
         ? 'There are no campus events to show right now.'
         : 'There is no campus news to show right now.';
     const actions = [];
-    if (state.query) actions.push({ label: 'Clear search', onPress: onClearSearch });
+    if (state.query) actions.push({ label: 'Clear search', onPress: search.onClear });
     if (state.filter !== 'all') actions.push({ label: 'Show all', onPress: onShowAll });
     if (hasMore) actions.push({ label: 'Load more', onPress: onLoadMore });
 
     return <StatusView kind="empty" title={title} message={message} actions={actions} />;
-  }, [hasMore, onClearSearch, onLoadMore, onRefresh, onShowAll, state]);
+  }, [hasMore, onLoadMore, onRefresh, onShowAll, search.onClear, state]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -148,13 +139,8 @@ export function FeedScreen({
         date={fetchedAt}
         filter={filter}
         insetsTop={insets.top}
-        isSearching={isSearching}
-        isSearchOpen={isSearchOpen}
-        onCloseSearch={onCloseSearch}
         onFilterChange={onFilterChange}
-        onOpenSearch={onOpenSearch}
-        onQueryChange={onQueryChange}
-        query={query}
+        search={search}
       />
     </View>
   );

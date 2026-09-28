@@ -6,6 +6,7 @@ import Animated from 'react-native-reanimated';
 
 import { FeedControls } from './FeedControls';
 import { FeedHeader } from './FeedHeader';
+import type { FeedSearch } from './FeedSearchRow';
 
 type CollapsingHeader = ReturnType<typeof useCollapsingHeader>;
 
@@ -14,13 +15,8 @@ interface FeedPinnedHeaderProps {
   date?: Date;
   filter: ActivityFilter;
   insetsTop: number;
-  isSearching: boolean;
-  isSearchOpen: boolean;
-  onCloseSearch: () => void;
+  search: FeedSearch;
   onFilterChange: (filter: ActivityFilter) => void;
-  onOpenSearch: () => void;
-  onQueryChange: (query: string) => void;
-  query: string;
 }
 
 export function FeedPinnedHeader({
@@ -28,13 +24,8 @@ export function FeedPinnedHeader({
   date,
   filter,
   insetsTop,
-  isSearching,
-  isSearchOpen,
-  onCloseSearch,
+  search,
   onFilterChange,
-  onOpenSearch,
-  onQueryChange,
-  query,
 }: FeedPinnedHeaderProps) {
   const theme = useTheme();
   const {
@@ -68,13 +59,8 @@ export function FeedPinnedHeader({
           <FeedHeader
             collapseDistance={collapseDistance}
             date={date}
-            isSearching={isSearching}
-            isSearchOpen={isSearchOpen}
-            onCloseSearch={onCloseSearch}
-            onOpenSearch={onOpenSearch}
-            onQueryChange={onQueryChange}
             onRowLayout={handleWordmarkRowLayout}
-            query={query}
+            search={search}
             scrollY={scrollY}
           />
         </Animated.View>

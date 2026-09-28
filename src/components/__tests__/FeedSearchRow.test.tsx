@@ -16,20 +16,26 @@ function SearchHeaderHarness({
 
   return (
     <FeedHeader
-      isSearchOpen={isSearchOpen}
-      isSearching={false}
       collapseDistance={collapseDistance}
-      onCloseSearch={() => {
-        setQuery('');
-        setIsSearchOpen(false);
-      }}
-      onOpenSearch={() => setIsSearchOpen(true)}
-      onQueryChange={(value) => {
-        setQuery(value);
-        onQueryChange(value);
+      search={{
+        query,
+        isOpen: isSearchOpen,
+        isSearching: false,
+        onClose: () => {
+          setQuery('');
+          setIsSearchOpen(false);
+        },
+        onOpen: () => setIsSearchOpen(true),
+        onQueryChange: (value) => {
+          setQuery(value);
+          onQueryChange(value);
+        },
+        onClear: () => {
+          setQuery('');
+          onQueryChange('');
+        },
       }}
       onRowLayout={() => {}}
-      query={query}
       scrollY={scrollY}
     />
   );

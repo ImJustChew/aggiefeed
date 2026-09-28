@@ -8,16 +8,11 @@ import { formatFeedDate } from '@/domain/date';
 import { getCollapseOffset } from '@/hooks/useCollapsingHeader';
 
 import { AnimatedReveal } from './AnimatedReveal';
-import { FeedSearchRow } from './FeedSearchRow';
+import { FeedSearchRow, type FeedSearch } from './FeedSearchRow';
 
 interface FeedHeaderProps {
   date?: Date;
-  isSearchOpen: boolean;
-  isSearching: boolean;
-  onOpenSearch: () => void;
-  onCloseSearch: () => void;
-  onQueryChange: (query: string) => void;
-  query: string;
+  search: FeedSearch;
   scrollY: SharedValue<number>;
   collapseDistance: SharedValue<number>;
   onRowLayout: (height: number) => void;
@@ -25,12 +20,7 @@ interface FeedHeaderProps {
 
 export function FeedHeader({
   date = new Date(),
-  isSearchOpen,
-  isSearching,
-  onOpenSearch,
-  onCloseSearch,
-  onQueryChange,
-  query,
+  search,
   scrollY,
   collapseDistance,
   onRowLayout,
@@ -83,16 +73,7 @@ export function FeedHeader({
         }
         style={[styles.wordmarkRow, rowStyle]}
       >
-        <FeedSearchRow
-          collapseDistance={collapseDistance}
-          isSearchOpen={isSearchOpen}
-          isSearching={isSearching}
-          onCloseSearch={onCloseSearch}
-          onOpenSearch={onOpenSearch}
-          onQueryChange={onQueryChange}
-          query={query}
-          scrollY={scrollY}
-        />
+        <FeedSearchRow collapseDistance={collapseDistance} search={search} scrollY={scrollY} />
       </Animated.View>
     </AnimatedReveal>
   );

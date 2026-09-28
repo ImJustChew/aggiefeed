@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { Activity, ActivityFilter } from '@/domain/activity';
 import type { FeedState } from '@/hooks/useActivities';
 
-import { FeedScreen } from '../FeedScreen';
+import { FeedScreen, type FeedPagination } from '../FeedScreen';
 
 const testMetrics = {
   frame: { x: 0, y: 0, width: 320, height: 640 },
@@ -67,19 +67,47 @@ function makeFeedControlProps(overrides: Partial<FeedControlProps> = {}): FeedCo
   };
 }
 
+function makeFeedScreenProps(overrides: Partial<FeedControlProps> = {}) {
+  const props = makeFeedControlProps(overrides);
+  const pagination: FeedPagination = {
+    hasMore: props.hasMore,
+    isLoadingMore: props.isLoadingMore,
+    loadMoreError: props.loadMoreError,
+    onLoadMore: props.onLoadMore,
+  };
+
+  return {
+    filter: props.filter,
+    onFilterChange: props.onFilterChange,
+    onShowAll: props.onShowAll,
+    search: {
+      query: props.query,
+      isOpen: props.isSearchOpen,
+      isSearching: props.isSearching,
+      onOpen: props.onOpenSearch,
+      onClose: props.onCloseSearch,
+      onQueryChange: props.onQueryChange,
+      onClear: props.onClearSearch,
+    },
+    pagination,
+  };
+}
+
 function renderFeed(
   state: FeedState,
   onRefresh = jest.fn(),
   onPressActivity = jest.fn(),
   options: Partial<FeedControlProps> = {},
 ) {
+  const props = makeFeedScreenProps(options);
+
   return render(
     <FeedScreen
       state={state}
       isRefreshing={false}
       onRefresh={onRefresh}
       onPressActivity={onPressActivity}
-      {...makeFeedControlProps(options)}
+      {...props}
     />,
     { wrapper: TestSafeAreaProvider },
   );
@@ -136,17 +164,17 @@ describe('FeedScreen', () => {
   });
 
   it('clears a non-empty search from the search field', async () => {
-    const onQueryChange = jest.fn();
+    const onClearSearch = jest.fn();
     await renderFeed({ status: 'loading' }, jest.fn(), jest.fn(), {
       isSearchOpen: true,
       query: 'library',
-      onQueryChange,
+      onClearSearch,
     });
 
     expect(screen.getByDisplayValue('library')).toBeOnTheScreen();
     const user = userEvent.setup();
     await user.press(screen.getByRole('button', { name: 'Clear search' }));
-    expect(onQueryChange).toHaveBeenCalledWith('');
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
   });
 
   it('opens search from the wordmark row and shows the editable input', async () => {
@@ -165,7 +193,7 @@ describe('FeedScreen', () => {
         isRefreshing={false}
         onRefresh={jest.fn()}
         onPressActivity={jest.fn()}
-        {...makeFeedControlProps({ isSearchOpen: true })}
+        {...makeFeedScreenProps({ isSearchOpen: true })}
       />,
     );
 
@@ -204,7 +232,7 @@ describe('FeedScreen', () => {
         isRefreshing={false}
         onRefresh={jest.fn()}
         onPressActivity={jest.fn()}
-        {...makeFeedControlProps({ isSearchOpen: false, query: '' })}
+        {...makeFeedScreenProps({ isSearchOpen: false, query: '' })}
       />,
     );
 
@@ -239,7 +267,7 @@ describe('FeedScreen', () => {
         isRefreshing={false}
         onRefresh={jest.fn()}
         onPressActivity={jest.fn()}
-        {...makeFeedControlProps({ isSearchOpen: true, query: 'library' })}
+        {...makeFeedScreenProps({ isSearchOpen: true, query: 'library' })}
       />,
     );
 

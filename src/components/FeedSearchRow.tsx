@@ -14,34 +14,30 @@ import type { SharedValue } from 'react-native-reanimated';
 
 import { fonts, spacing, useTheme } from '@/theme';
 
+export interface FeedSearch {
+  query: string;
+  isOpen: boolean;
+  isSearching: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onQueryChange: (query: string) => void;
+  onClear: () => void;
+}
+
 interface FeedSearchRowProps {
   collapseDistance: SharedValue<number>;
-  isSearchOpen: boolean;
-  isSearching: boolean;
-  onCloseSearch: () => void;
-  onOpenSearch: () => void;
-  onQueryChange: (query: string) => void;
-  query: string;
+  search: FeedSearch;
   scrollY: SharedValue<number>;
 }
 
-export function FeedSearchRow({
-  collapseDistance,
-  isSearchOpen,
-  isSearching,
-  onCloseSearch,
-  onOpenSearch,
-  onQueryChange,
-  query,
-  scrollY,
-}: FeedSearchRowProps) {
+export function FeedSearchRow({ collapseDistance, search, scrollY }: FeedSearchRowProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
-  const modeProgress = useSharedValue(isSearchOpen ? 1 : 0);
+  const modeProgress = useSharedValue(search.isOpen ? 1 : 0);
 
   useEffect(() => {
-    const target = isSearchOpen ? 1 : 0;
+    const target = search.isOpen ? 1 : 0;
     modeProgress.set(
       reducedMotion
         ? target
@@ -51,12 +47,12 @@ export function FeedSearchRow({
           }),
     );
 
-    if (isSearchOpen) {
+    if (search.isOpen) {
       inputRef.current?.focus();
     } else {
       inputRef.current?.blur();
     }
-  }, [isSearchOpen, modeProgress, reducedMotion]);
+  }, [modeProgress, reducedMotion, search.isOpen]);
 
   const titleScaleStyle = useAnimatedStyle(() => {
     const range = collapseDistance.value;
@@ -90,9 +86,9 @@ export function FeedSearchRow({
   return (
     <>
       <Animated.View
-        accessibilityElementsHidden={isSearchOpen}
-        importantForAccessibility={isSearchOpen ? 'no-hide-descendants' : 'yes'}
-        pointerEvents={isSearchOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={search.isOpen}
+        importantForAccessibility={search.isOpen ? 'no-hide-descendants' : 'yes'}
+        pointerEvents={search.isOpen ? 'none' : 'auto'}
         style={[styles.modeLayer, wordmarkModeStyle]}
       >
         <Animated.View testID="feed-header-title" style={[styles.titleSlot, titleScaleStyle]}>
@@ -102,7 +98,7 @@ export function FeedSearchRow({
           accessibilityLabel="Search stories"
           accessibilityRole="button"
           hitSlop={8}
-          onPress={onOpenSearch}
+          onPress={search.onOpen}
           style={styles.iconButton}
         >
           <Ionicons color={theme.colors.text} name="search" size={22} />
@@ -110,9 +106,9 @@ export function FeedSearchRow({
       </Animated.View>
 
       <Animated.View
-        accessibilityElementsHidden={!isSearchOpen}
-        importantForAccessibility={isSearchOpen ? 'yes' : 'no-hide-descendants'}
-        pointerEvents={isSearchOpen ? 'auto' : 'none'}
+        accessibilityElementsHidden={!search.isOpen}
+        importantForAccessibility={search.isOpen ? 'yes' : 'no-hide-descendants'}
+        pointerEvents={search.isOpen ? 'auto' : 'none'}
         style={[styles.modeLayer, searchModeStyle]}
       >
         <View style={[styles.searchField, { borderBottomColor: theme.colors.hairline }]}>
@@ -121,26 +117,26 @@ export function FeedSearchRow({
             ref={inputRef}
             autoCapitalize="none"
             autoCorrect={false}
-            onChangeText={onQueryChange}
+            onChangeText={search.onQueryChange}
             placeholder="Search campus stories"
             placeholderTextColor={theme.colors.textTertiary}
             returnKeyType="search"
             style={[styles.input, { color: theme.colors.text }]}
             testID="feed-search-input"
-            value={query}
+            value={search.query}
           />
-          {query.length > 0 ? (
+          {search.query.length > 0 ? (
             <Pressable
               accessibilityLabel="Clear search"
               accessibilityRole="button"
               hitSlop={8}
-              onPress={() => onQueryChange('')}
+              onPress={search.onClear}
               style={styles.clearButton}
             >
               <Text style={[styles.clearText, { color: theme.colors.textSecondary }]}>×</Text>
             </Pressable>
           ) : null}
-          {isSearching ? (
+          {search.isSearching ? (
             <ActivityIndicator
               accessibilityLabel="Searching stories"
               accessibilityRole="progressbar"
@@ -153,7 +149,7 @@ export function FeedSearchRow({
         <Pressable
           accessibilityLabel="Cancel"
           accessibilityRole="button"
-          onPress={onCloseSearch}
+          onPress={search.onClose}
           style={styles.cancelButton}
         >
           <Text style={[styles.cancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>

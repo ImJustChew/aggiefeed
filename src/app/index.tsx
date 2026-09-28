@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { BackHandler } from 'react-native';
 
 import type { ActivityFilter } from '@/domain/activity';
@@ -50,27 +50,34 @@ export default function FeedRoute() {
   const onPressActivity = useCallback((id: string) => {
     router.push({ pathname: '/activity/[id]', params: { id } });
   }, []);
+  const search = useMemo(
+    () => ({
+      query,
+      isOpen: isSearchOpen,
+      isSearching,
+      onOpen: openSearch,
+      onClose: closeSearch,
+      onQueryChange: setQuery,
+      onClear: clearSearch,
+    }),
+    [clearSearch, closeSearch, isSearchOpen, isSearching, openSearch, query],
+  );
+  const pagination = useMemo(
+    () => ({ hasMore, isLoadingMore, loadMoreError, onLoadMore: loadMore }),
+    [hasMore, isLoadingMore, loadMore, loadMoreError],
+  );
 
   return (
     <FeedScreen
       state={state}
-      isSearchOpen={isSearchOpen}
-      query={query}
       filter={filter}
-      onOpenSearch={openSearch}
-      onCloseSearch={closeSearch}
-      onQueryChange={setQuery}
       onFilterChange={setFilter}
       isRefreshing={isRefreshing}
       onRefresh={reload}
-      onLoadMore={loadMore}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      loadMoreError={loadMoreError}
-      isSearching={isSearching}
-      onClearSearch={clearSearch}
       onShowAll={showAll}
       onPressActivity={onPressActivity}
+      search={search}
+      pagination={pagination}
     />
   );
 }
