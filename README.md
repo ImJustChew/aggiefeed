@@ -8,7 +8,7 @@ Built with Expo Router, TanStack Query, and Reanimated.
 
 Requirements:
 
-- Node.js 22.13+ or 24+.
+- Node.js 20.19.4+, 22.13+, or 24.3+ (React Native 0.86 requirement).
 - Bun.
 - Expo Go for SDK 57, or an Android emulator / iOS simulator.
 - Network access to the public AggieFeed API.
@@ -52,14 +52,14 @@ Implemented: pull-to-refresh, basic unit tests, basic component tests, date form
 
 ## Beyond the spec
 
-- Infinite scroll — loads 25-item pages after the exact `s=0&l=25` first request; stops at the API's `skip` cap, short pages, or exhausted data.
-- Server search — the header search toggle sends debounced `q` searches; the 350 ms debounce and server matching remain limits.
-- News/Events tabs — filters on the client because the API has no type filter; sparse results use a bounded page fill.
-- Tappable summary links — preserves and opens `http(s)` links in summaries; other formatting is flattened.
-- Collapsing header and motion — Reanimated handles scroll, presses, reveals, and loading; timed effects respect reduced motion, while header collapse remains scroll-linked.
-- Newsreader/Inter typography and Aggie blue/gold icon — bundled fonts and configured icon assets; a font-load error lets the app continue.
-- Event When/Where — shows normalized date and location; missing values use readable fallbacks and times use the device's local time zone.
-- Cache-aware detail route — checks cached lists first, then fetches the default first page on a miss; absent IDs show `Activity not found`.
+- **Infinite scroll.** Loads 25-item pages after the exact `s=0&l=25` first request and stops at the API's `skip` cap of 4000, short pages, or exhausted data.
+- **Server search.** The header search toggle sends debounced `q` searches with a 350 ms debounce; server matching remains a limit.
+- **News/Events tabs.** Filters on the client because the API has no type filter, using a bounded page fill for sparse results.
+- **Tappable summary links.** Preserves and opens `http(s)` links in summaries; other formatting is flattened.
+- **Collapsing header and motion.** Reanimated handles scroll, presses, reveals, and loading; timed effects respect reduced motion, while header collapse remains scroll-linked.
+- **Newsreader/Inter typography and Aggie blue/gold icon.** Uses bundled fonts and configured icon assets; a font-load failure is non-fatal.
+- **Event When/Where.** Shows normalized date and location; missing values use readable fallbacks, and event times use the device's local time.
+- **Cache-aware detail route.** Reads cached lists first, then fetches the default first page on a miss; unknown IDs show `Activity not found`.
 
 ## Project structure
 
@@ -74,17 +74,17 @@ src/
 ├── integration/  router flow tests
 ├── lib/          shared QueryClient configuration
 ├── theme/        colors, fonts, and spacing
-└── ui/           activity display formatting
+└── ui/           display labels, fallback copy, and activity formatting
 ```
 
-The layering is `api → domain → hooks → screens/components ← app routes`.
+Routes in `src/app/` stay thin and wire hooks to screens; screens/components render; hooks own data fetching via TanStack Query; `api` fetches and hands the raw JSON to `domain` for parsing; `domain` is pure and framework-free.
 
 ## Tests
 
 - Domain/API unit tests cover requests, parsing, missing data, links, dates, and filtering.
 - Hook tests cover loading, errors, refresh, search, pagination, sparse filters, and detail lookup.
 - Component/screen tests cover feed controls, list states, activity details, links, and event metadata.
-- Router integration covers list → detail → back, error → Retry, empty, search, Events, and unknown IDs. Tested on an Android emulator; no physical iOS device was used.
+- Router integration covers list → detail → back, error → Retry, empty, search, Events, and unknown IDs.
 
 ## Notes & limitations
 
@@ -93,14 +93,29 @@ The layering is `api → domain → hooks → screens/components ← app routes`
 - React Query uses an in-memory cache only; there is no offline persistence.
 - Summaries keep links but not other formatting.
 - In Expo Go on Android, closing the in-app browser can return to Expo Go's home instead of the app. The app is still running; this is not an issue in standalone builds.
+- Manually tested on an Android emulator; not tested on a physical iOS device.
 
 ## Troubleshooting
 
 For an Android emulator that cannot reach Metro, often because of a VPN or multiple network interfaces:
+
+macOS/Linux (`sh`):
 
 ```sh
 adb reverse tcp:8081 tcp:8081
 REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 bun run start
 ```
 
-Open `exp://127.0.0.1:8081` in Expo Go. PowerShell: `$env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; adb reverse tcp:8081 tcp:8081; bun run start`
+Windows (PowerShell):
+
+```powershell
+$env:REACT_NATIVE_PACKAGER_HOSTNAME = "127.0.0.1"
+adb reverse tcp:8081 tcp:8081
+bun run start
+```
+
+Open `exp://127.0.0.1:8081` in Expo Go.
+
+## AI assistance
+
+This project was built with AI coding assistants. AGENTS.md holds the project guidelines they followed.
