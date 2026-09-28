@@ -22,19 +22,6 @@ interface FeedControlsProps {
 }
 
 export function FeedControls({ filter, onFilterChange }: FeedControlsProps) {
-  return (
-    <View style={styles.container}>
-      <FilterTabs filter={filter} onFilterChange={onFilterChange} />
-    </View>
-  );
-}
-
-interface FilterTabsProps {
-  filter: ActivityFilter;
-  onFilterChange: (filter: ActivityFilter) => void;
-}
-
-function FilterTabs({ filter, onFilterChange }: FilterTabsProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [tabsWidth, setTabsWidth] = useState(0);
@@ -51,44 +38,46 @@ function FilterTabs({ filter, onFilterChange }: FilterTabsProps) {
   }, [indicatorX, reducedMotion, selectedIndex, tabWidth]);
 
   return (
-    <View
-      accessibilityLabel="Story type"
-      accessibilityRole="tablist"
-      onLayout={({ nativeEvent }) => setTabsWidth(nativeEvent.layout.width)}
-      style={[styles.tabs, { borderBottomColor: theme.colors.hairline }]}
-    >
-      {FILTER_OPTIONS.map((option) => {
-        const isSelected = option.value === filter;
+    <View style={styles.container}>
+      <View
+        accessibilityLabel="Story type"
+        accessibilityRole="tablist"
+        onLayout={({ nativeEvent }) => setTabsWidth(nativeEvent.layout.width)}
+        style={[styles.tabs, { borderBottomColor: theme.colors.hairline }]}
+      >
+        {FILTER_OPTIONS.map((option) => {
+          const isSelected = option.value === filter;
 
-        return (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isSelected }}
-            key={option.value}
-            onPress={() => onFilterChange(option.value)}
-            style={styles.tab}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: isSelected ? theme.colors.text : theme.colors.textTertiary },
-              ]}
+          return (
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+              key={option.value}
+              onPress={() => onFilterChange(option.value)}
+              style={styles.tab}
             >
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-      {tabWidth > 0 ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.indicator,
-            { backgroundColor: theme.colors.accent, width: tabWidth },
-            indicatorStyle,
-          ]}
-        />
-      ) : null}
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: isSelected ? theme.colors.text : theme.colors.textTertiary },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+        {tabWidth > 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.indicator,
+              { backgroundColor: theme.colors.accent, width: tabWidth },
+              indicatorStyle,
+            ]}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
