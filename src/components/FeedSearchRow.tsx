@@ -18,9 +18,9 @@ interface FeedSearchRowProps {
   collapseDistance: SharedValue<number>;
   isSearchOpen: boolean;
   isSearching: boolean;
-  onCloseSearch?: () => void;
-  onOpenSearch?: () => void;
-  onQueryChange?: (query: string) => void;
+  onCloseSearch: () => void;
+  onOpenSearch: () => void;
+  onQueryChange: (query: string) => void;
   query: string;
   scrollY: SharedValue<number>;
 }
@@ -121,7 +121,6 @@ export function FeedSearchRow({
             ref={inputRef}
             autoCapitalize="none"
             autoCorrect={false}
-            autoFocus={isSearchOpen}
             onChangeText={onQueryChange}
             placeholder="Search campus stories"
             placeholderTextColor={theme.colors.textTertiary}
@@ -135,7 +134,7 @@ export function FeedSearchRow({
               accessibilityLabel="Clear search"
               accessibilityRole="button"
               hitSlop={8}
-              onPress={() => onQueryChange?.('')}
+              onPress={() => onQueryChange('')}
               style={styles.clearButton}
             >
               <Text style={[styles.clearText, { color: theme.colors.textSecondary }]}>×</Text>

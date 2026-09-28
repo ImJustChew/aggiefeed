@@ -1,11 +1,6 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated, { Extrapolation, interpolate, useAnimatedStyle } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { fonts, spacing, useTheme } from '@/theme';
@@ -17,51 +12,47 @@ import { FeedSearchRow } from './FeedSearchRow';
 
 interface FeedHeaderProps {
   date?: Date;
-  isSearchOpen?: boolean;
-  isSearching?: boolean;
-  onOpenSearch?: () => void;
-  onCloseSearch?: () => void;
-  onQueryChange?: (query: string) => void;
-  query?: string;
-  scrollY?: SharedValue<number>;
-  collapseDistance?: SharedValue<number>;
-  onRowLayout?: (height: number) => void;
+  isSearchOpen: boolean;
+  isSearching: boolean;
+  onOpenSearch: () => void;
+  onCloseSearch: () => void;
+  onQueryChange: (query: string) => void;
+  query: string;
+  scrollY: SharedValue<number>;
+  collapseDistance: SharedValue<number>;
+  onRowLayout: (height: number) => void;
 }
 
 export function FeedHeader({
   date = new Date(),
-  isSearchOpen = false,
-  isSearching = false,
+  isSearchOpen,
+  isSearching,
   onOpenSearch,
   onCloseSearch,
   onQueryChange,
-  query = '',
+  query,
   scrollY,
   collapseDistance,
   onRowLayout,
 }: FeedHeaderProps) {
   const theme = useTheme();
-  const internalScrollY = useSharedValue(0);
-  const internalCollapseDistance = useSharedValue(0);
-  const activeScrollY = scrollY ?? internalScrollY;
-  const activeCollapseDistance = collapseDistance ?? internalCollapseDistance;
   const [rowOffset, setRowOffset] = useState(0);
 
   const handleRowLayout = useCallback(
     (height: number, offset: number) => {
       if (offset !== rowOffset) setRowOffset(offset);
-      onRowLayout?.(height);
+      onRowLayout(height);
     },
     [onRowLayout, rowOffset],
   );
 
   const collapsingStyle = useAnimatedStyle(() => {
-    const range = activeCollapseDistance.value;
+    const range = collapseDistance.value;
     if (range <= 0) {
       return { opacity: 1, transform: [{ translateY: 0 }] };
     }
 
-    const offset = getCollapseOffset(activeScrollY.value, range);
+    const offset = getCollapseOffset(scrollY.value, range);
 
     return {
       opacity: interpolate(offset, [0, range * 0.45], [1, 0], Extrapolation.CLAMP),
@@ -70,10 +61,10 @@ export function FeedHeader({
   });
 
   const rowStyle = useAnimatedStyle(() => {
-    const range = activeCollapseDistance.value;
+    const range = collapseDistance.value;
     if (range <= 0) return { transform: [{ translateY: 0 }] };
 
-    const offset = getCollapseOffset(activeScrollY.value, range);
+    const offset = getCollapseOffset(scrollY.value, range);
 
     return { transform: [{ translateY: -Math.min(offset, rowOffset) }] };
   }, [rowOffset]);
@@ -93,14 +84,14 @@ export function FeedHeader({
         style={[styles.wordmarkRow, rowStyle]}
       >
         <FeedSearchRow
-          collapseDistance={activeCollapseDistance}
+          collapseDistance={collapseDistance}
           isSearchOpen={isSearchOpen}
           isSearching={isSearching}
           onCloseSearch={onCloseSearch}
           onOpenSearch={onOpenSearch}
           onQueryChange={onQueryChange}
           query={query}
-          scrollY={activeScrollY}
+          scrollY={scrollY}
         />
       </Animated.View>
     </AnimatedReveal>

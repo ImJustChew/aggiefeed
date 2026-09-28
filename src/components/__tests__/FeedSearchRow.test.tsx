@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 import { FeedHeader } from '../FeedHeader';
 
@@ -10,10 +11,14 @@ function SearchHeaderHarness({
 }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const scrollY = useSharedValue(0);
+  const collapseDistance = useSharedValue(0);
 
   return (
     <FeedHeader
       isSearchOpen={isSearchOpen}
+      isSearching={false}
+      collapseDistance={collapseDistance}
       onCloseSearch={() => {
         setQuery('');
         setIsSearchOpen(false);
@@ -23,7 +28,9 @@ function SearchHeaderHarness({
         setQuery(value);
         onQueryChange(value);
       }}
+      onRowLayout={() => {}}
       query={query}
+      scrollY={scrollY}
     />
   );
 }
