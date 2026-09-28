@@ -2,20 +2,30 @@
 
 AggieFeed is an Expo SDK 57 + TypeScript mobile reader for the public AggieFeed activity API. It loads a list of activities and opens each one in a detail screen.
 
-Built with Expo Router, TanStack Query, and Reanimated.
+## Libraries
+
+- `expo-router` — file-based navigation.
+- `@tanstack/react-query` — server-state fetching and caching.
+- `react-native-reanimated` — performant motion.
+- `expo-web-browser` — in-app links.
+- `expo-font` with `@expo-google-fonts/inter` and `@expo-google-fonts/newsreader` — app typography.
+- `react-native-safe-area-context` — safe-area layout.
+- `jest-expo` + `@testing-library/react-native` — unit and component tests.
+- ESLint, Prettier, and knip — quality and dead-code checks.
 
 ## Run it
 
 Requirements:
 
 - Node.js 20.19.4+, 22.13+, or 24.3+ (React Native 0.86 requirement).
-- Bun.
+- [Bun](https://bun.sh).
 - Expo Go for SDK 57, or an Android emulator / iOS simulator.
 - Network access to the public AggieFeed API.
 
-From the repository root:
 
 ```sh
+git clone <repo-url>
+cd aggiefeed-interview
 bun install
 bun run start
 ```
@@ -36,7 +46,7 @@ bun run test
 
 `bun run check` runs typecheck, lint, knip, and tests in sequence. Individual scripts are `bun run typecheck`, `bun run lint`, and `bun run knip`.
 
-## Spec coverage
+## Requirements coverage
 
 - The list shows `title` and `actor.displayName` in `src/components/FeedItem.tsx`.
 - The list uses Reanimated's `Animated.FlatList` in `src/screens/FeedScreen.tsx`.
@@ -46,11 +56,11 @@ bun run test
 - `ApiActivity` and normalized `Activity` types cover the API model without `any` reliance (`src/api/types.ts`, `src/domain/activity.ts`).
 - Missing fields become readable fallbacks such as `Untitled`, `Unknown source`, and `Date unavailable` (`src/ui/activityPresentation.ts`).
 
-## Optional enhancements from the spec
+## Optional enhancements
 
 Implemented: pull-to-refresh, basic unit tests, basic component tests, date formatting, improved visual styling, accessibility labels, light/dark mode, Retry button on API error, and TanStack React Query.
 
-## Beyond the spec
+## Beyond the requirements
 
 - **Infinite scroll.** Loads 25-item pages after the exact `s=0&l=25` first request and stops at the API's `skip` cap of 4000, short pages, or exhausted data.
 - **Server search.** The header search toggle sends debounced `q` searches with a 350 ms debounce; server matching remains a limit.
@@ -86,8 +96,10 @@ Routes in `src/app/` stay thin and wire hooks to screens; screens/components ren
 - Component/screen tests cover feed controls, list states, activity details, links, and event metadata.
 - Router integration covers list → detail → back, error → Retry, empty, search, Events, and unknown IDs.
 
-## Notes & limitations
+## Assumptions & limitations
 
+- Any API field may be missing, so parsing is defensive.
+- News/Events filtering is client-side because the API has no type filter.
 - The API accepts only `s`, `l`, and `q`; `skip` is capped at 4000 and `limit` at 500.
 - Server order is preserved. A story from two sources can appear twice when the records have different IDs.
 - React Query uses an in-memory cache only; there is no offline persistence.
