@@ -30,8 +30,7 @@ function cleanLocation(value: string | null): string | null {
   return parts.length > 0 ? parts.join(', ') : null;
 }
 
-function toEvent(object: Record<string, unknown>): ActivityEvent | null {
-  const model = isRecord(object.ucdEdusModel) ? object.ucdEdusModel : null;
+function toEvent(model: Record<string, unknown> | null): ActivityEvent | null {
   const event = model !== null && isRecord(model.event) ? model.event : null;
   if (event === null) return null;
 
@@ -57,7 +56,7 @@ function toActivity(raw: ApiActivity, index: number, skip: number): Activity {
     summary: htmlToPlainText(object === null ? null : stringValue(object.content)),
     summarySegments: parseRichText(object === null ? null : stringValue(object.content)),
     url: parseHttpUrl(model === null ? null : stringValue(model.url)),
-    event: object === null ? null : toEvent(object),
+    event: toEvent(model),
   };
 }
 

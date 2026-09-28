@@ -33,13 +33,16 @@ export function decodeHtmlEntities(input: string): string {
   return input.replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]+);/gi, decodeEntity);
 }
 
+// Upstream content carries SQL-escaped apostrophes like "You''ll".
+export function normalizeSqlEscapedApostrophes(input: string): string {
+  return input.replace(/(\w)''(\w)/g, "$1'$2");
+}
+
 /** Decodes feed text and normalizes the blank values that the UI cannot render. */
 export function cleanText(input: string | null | undefined): string | null {
   if (typeof input !== 'string') return null;
 
-  // Upstream content carries SQL-escaped apostrophes like "You''ll".
-  const text = decodeHtmlEntities(input)
-    .replace(/(\w)''(\w)/g, "$1'$2")
+  const text = normalizeSqlEscapedApostrophes(decodeHtmlEntities(input))
     .replace(/\s+/g, ' ')
     .trim();
 

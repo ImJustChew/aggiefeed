@@ -1,4 +1,4 @@
-import { cleanText, decodeHtmlEntities } from './text';
+import { cleanText, decodeHtmlEntities, normalizeSqlEscapedApostrophes } from './text';
 import { parseHttpUrl } from './url';
 
 export type RichSegment =
@@ -139,7 +139,7 @@ export function parseRichText(html: string | null): RichSegment[] | null {
       continue;
     }
 
-    const decoded = decodeHtmlEntities(rawSegment.text).replace(/(\w)''(\w)/g, "$1'$2");
+    const decoded = normalizeSqlEscapedApostrophes(decodeHtmlEntities(rawSegment.text));
     const hasLeadingWhitespace = /^\s/.test(decoded);
     const hasTrailingWhitespace = /\s$/.test(decoded);
     const text =

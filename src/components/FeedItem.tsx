@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { Activity } from '@/domain/activity';
+import { isEvent, type Activity } from '@/domain/activity';
 import { fonts, spacing, useTheme } from '@/theme';
 import {
   displayEventStart,
@@ -9,7 +9,6 @@ import {
   displayRelativePublished,
   displaySource,
   displayTitle,
-  isEvent,
 } from '@/ui/activityPresentation';
 
 import { AnimatedPressable } from './AnimatedPressable';

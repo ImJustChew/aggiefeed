@@ -27,8 +27,7 @@ export function formatShortDate(date: Date): string {
 }
 
 export function formatDateTime(date: Date): string {
-  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${formatDate(date)} · ${time}`;
+  return `${formatDate(date)} · ${formatTime(date, true)}`;
 }
 
 function formatTime(date: Date, includeMeridiem: boolean): string {
@@ -52,11 +51,18 @@ export function formatDateRange(start: Date, end: Date): string {
 }
 
 export function formatRelative(date: Date, now: Date): string {
+  const formatMonthDay = () => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const elapsed = now.getTime() - date.getTime();
-  if (elapsed < 0) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (elapsed < 0) return formatMonthDay();
   if (elapsed < MINUTE) return 'Just now';
   if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`;
   if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`;
   if (elapsed < 7 * DAY) return `${Math.floor(elapsed / DAY)}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatMonthDay();
+}
+
+export function formatFeedDate(date = new Date()): string {
+  return date
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    .toUpperCase();
 }

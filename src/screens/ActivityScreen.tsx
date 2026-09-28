@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { isEvent } from '@/domain/activity';
 import type { ActivityState } from '@/hooks/useActivities';
 import { fonts, spacing, useTheme } from '@/theme';
 import {
@@ -12,7 +13,6 @@ import {
   displaySource,
   displayTitle,
   fallbackCopy,
-  isEvent,
 } from '@/ui/activityPresentation';
 
 import { AnimatedPressable } from '@/components/AnimatedPressable';

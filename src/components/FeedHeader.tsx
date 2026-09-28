@@ -9,7 +9,7 @@ import Animated, {
 import type { SharedValue } from 'react-native-reanimated';
 
 import { fonts, spacing, useTheme } from '@/theme';
-import { formatFeedDate } from '@/ui/activityPresentation';
+import { formatFeedDate } from '@/domain/date';
 import { getCollapseOffset } from '@/hooks/useCollapsingHeader';
 
 import { AnimatedReveal } from './AnimatedReveal';

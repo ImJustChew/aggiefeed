@@ -33,6 +33,12 @@ export function displaySource(activity: Activity): string {
   return activity.source ?? fallbackCopy.source;
 }
 
+function displayObjectTypeName(objectType: string | null): string {
+  if (objectType === null) return fallbackCopy.type;
+
+  return capitalizeWords(objectType) || fallbackCopy.type;
+}
+
 function displayType(objectType: string | null): string {
   if (objectType === null) return fallbackCopy.type;
 
@@ -42,7 +48,7 @@ function displayType(objectType: string | null): string {
     case 'event':
       return 'Event';
     default:
-      return capitalizeWords(objectType) || fallbackCopy.type;
+      return displayObjectTypeName(objectType);
   }
 }
 
@@ -51,9 +57,7 @@ export function displayActivityType(activity: Activity): string {
 }
 
 export function displayObjectType(activity: Activity): string {
-  if (activity.objectType === null) return fallbackCopy.type;
-
-  return capitalizeWords(activity.objectType) || fallbackCopy.type;
+  return displayObjectTypeName(activity.objectType);
 }
 
 export function displayPublished(published: Date | null): string {
@@ -80,11 +84,3 @@ export function displayEventWhen(activity: Activity): string {
 export function displayEventLocation(activity: Activity): string {
   return activity.event?.location ?? fallbackCopy.location;
 }
-
-export function formatFeedDate(date = new Date()): string {
-  return date
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    .toUpperCase();
-}
-
-export { isEvent };
