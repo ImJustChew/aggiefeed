@@ -78,20 +78,6 @@ export function FeedHeader({
     return { transform: [{ translateY: -Math.min(offset, rowOffset) }] };
   }, [rowOffset]);
 
-  const subtitleStyle = useAnimatedStyle(() => {
-    const range = activeCollapseDistance.value;
-    if (range <= 0) {
-      return { opacity: 1, transform: [{ translateY: 0 }] };
-    }
-
-    const offset = getCollapseOffset(activeScrollY.value, range);
-
-    return {
-      opacity: interpolate(offset, [0, range * 0.7], [1, 0], Extrapolation.CLAMP),
-      transform: [{ translateY: -offset * 0.35 }],
-    };
-  });
-
   return (
     <AnimatedReveal style={styles.container}>
       <Animated.View style={[styles.dateBlock, collapsingStyle]}>
@@ -117,12 +103,6 @@ export function FeedHeader({
           scrollY={activeScrollY}
         />
       </Animated.View>
-
-      <Animated.View style={[styles.subtitleBlock, subtitleStyle]}>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Campus news and events, in one calm read.
-        </Text>
-      </Animated.View>
     </AnimatedReveal>
   );
 }
@@ -132,6 +112,4 @@ const styles = StyleSheet.create({
   dateBlock: { minHeight: 14 },
   date: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14, letterSpacing: 1.1 },
   wordmarkRow: { height: 64, marginTop: spacing.sm, position: 'relative' },
-  subtitleBlock: { marginTop: spacing.sm, minHeight: 22 },
-  subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
 });
