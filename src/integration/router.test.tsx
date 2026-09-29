@@ -1,8 +1,16 @@
 import { ExpoRoot, router } from 'expo-router';
 import { getMockContext } from 'expo-router/testing-library';
-import { act, cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from '@testing-library/react-native';
 
-import { FeedRequestError, fetchActivities } from '@/api/aggieFeed';
+import { ACTIVITY_PAGE_SIZE, FeedRequestError, fetchActivities } from '@/api/aggieFeed';
 import type { Activity } from '@/domain/activity';
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -60,6 +68,20 @@ const eventActivity: Activity = {
   },
 };
 
+function makeActivity(id: string, title: string): Activity {
+  return {
+    id,
+    title,
+    source: 'Test source',
+    objectType: 'notification',
+    published: new Date('2026-09-25T12:00:00Z'),
+    summary: `Summary for ${title}.`,
+    summarySegments: [{ kind: 'text', text: `Summary for ${title}.` }],
+    url: null,
+    event: null,
+  };
+}
+
 async function renderRoutes(location = '/') {
   return render(<ExpoRoot context={getMockContext('./src/app')} location={location} />);
 }
@@ -95,6 +117,62 @@ describe('Expo Router activity flows', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Route story. Route source' })).toBeOnTheScreen(),
     );
+  });
+
+  it('reopens a later-page activity after the stale window', async () => {
+    const firstPage = Array.from({ length: ACTIVITY_PAGE_SIZE }, (_, index) =>
+      makeActivity(`page-${index}`, `Page story ${index}`),
+    );
+    const laterActivity = makeActivity('later-story', 'Later story');
+    laterActivity.source = 'Later source';
+    mockedFetchActivities.mockImplementation(({ skip = 0 } = {}) => {
+      if (skip === 0) return Promise.resolve(firstPage);
+      if (skip === ACTIVITY_PAGE_SIZE) return Promise.resolve([laterActivity]);
+      return Promise.resolve([]);
+    });
+
+    await renderRoutes();
+    await screen.findByRole('button', { name: 'Page story 0. Test source' });
+
+    const user = userEvent.setup();
+    await fireEvent(screen.getByLabelText('Campus stories'), 'onEndReached');
+    await user.scrollTo(screen.getByLabelText('Campus stories'), {
+      y: 10_000,
+      contentSize: { height: 10_000, width: 0 },
+      layoutMeasurement: { height: 800, width: 0 },
+    });
+    expect(
+      await screen.findByRole('button', { name: 'Later story. Later source' }),
+    ).toBeOnTheScreen();
+
+    // This test client uses gcTime 0, so keep any detail query cached like the production default so a stale detail query would refetch on reopen.
+    mockAppQueryClient?.setQueryDefaults(['activity'], { gcTime: 60_000 });
+    await user.press(screen.getByRole('button', { name: 'Later story. Later source' }));
+    expect(await screen.findByText('Later story')).toBeOnTheScreen();
+
+    await act(() => router.back());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Later story. Later source' })).toBeOnTheScreen(),
+    );
+
+    const callsBeforeReopen = mockedFetchActivities.mock.calls.length;
+    const realDateNow = Date.now;
+    const dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => realDateNow() + 31_000);
+
+    try {
+      await user.press(screen.getByRole('button', { name: 'Later story. Later source' }));
+      await waitFor(() => {
+        expect(
+          mockedFetchActivities.mock.calls
+            .slice(callsBeforeReopen)
+            .map(([options]) => options?.skip),
+        ).toEqual([]);
+      });
+      expect(await screen.findByText('By Later source')).toBeOnTheScreen();
+      expect(screen.queryByText('Activity not found')).not.toBeOnTheScreen();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 
   it('shows a Retry button after an initial API error and then shows the list', async () => {

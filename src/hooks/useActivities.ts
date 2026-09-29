@@ -1,13 +1,12 @@
 import {
   infiniteQueryOptions,
   keepPreviousData,
-  queryOptions,
   useInfiniteQuery,
-  useQuery,
   useQueryClient,
   type InfiniteData,
+  type QueryClient,
 } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
   ACTIVITY_PAGE_SIZE,
@@ -28,7 +27,6 @@ type ActivitiesQueryKey = readonly ['activities', { query: string }];
 
 const AUTO_FILL_LIMIT = 4;
 const SPARSE_FILTER_THRESHOLD = 10;
-const ACTIVITY_STALE_TIME = 30_000;
 
 export type FeedState =
   | { status: 'loading' }
@@ -66,6 +64,16 @@ function toErrorMessage(error: unknown): string {
 
 function activitiesQueryKey(query: string): ActivitiesQueryKey {
   return ['activities', { query }];
+}
+
+function findCachedActivity(queryClient: QueryClient, id: string): Activity | undefined {
+  const cachedQueries = queryClient.getQueriesData<ActivitiesQueryData>({
+    queryKey: ['activities'],
+  });
+
+  return flattenActivities(cachedQueries.flatMap(([, cached]) => cached?.pages ?? [])).find(
+    (activity) => activity.id === id,
+  );
 }
 
 function activitiesQueryOptions(query: string) {
@@ -197,49 +205,15 @@ export function useFeed({ query = '', filter = 'all' }: UseFeedOptions = {}) {
   };
 }
 
-/** Reads one activity from cached feed queries, fetching the default page if needed. */
-export function useActivity(id: string) {
+/** Reads one activity from cached feed queries; never fetches because the API has no single-activity endpoint. */
+export function useActivity(id: string): ActivityState {
   const queryClient = useQueryClient();
-  const activityQueryOptions = useMemo(
-    () =>
-      queryOptions({
-        queryKey: ['activity', id] as const,
-        queryFn: async ({ signal }) => {
-          const activities = await fetchActivities({
-            skip: 0,
-            limit: ACTIVITY_PAGE_SIZE,
-            query: '',
-            signal,
-          });
-          return activities.find((activity) => activity.id === id) ?? null;
-        },
-        initialData: () => {
-          const cachedQueries = queryClient.getQueriesData<ActivitiesQueryData>({
-            queryKey: ['activities'],
-          });
-          const hasCachedData = cachedQueries.some(([, cached]) => cached !== undefined);
-          if (!hasCachedData) return undefined;
-
-          return flattenActivities(cachedQueries.flatMap(([, cached]) => cached?.pages ?? [])).find(
-            (activity) => activity.id === id,
-          );
-        },
-        staleTime: ACTIVITY_STALE_TIME,
-      }),
-    [id, queryClient],
+  const subscribe = useCallback(
+    (listener: () => void) => queryClient.getQueryCache().subscribe(listener),
+    [queryClient],
   );
-  const { data, error, isPending, isFetching, refetch } = useQuery(activityQueryOptions);
+  const getSnapshot = useCallback(() => findCachedActivity(queryClient, id), [id, queryClient]);
+  const activity = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  let state: ActivityState;
-  if (data !== undefined && data !== null) {
-    state = { status: 'ready', activity: data };
-  } else if (data === null) {
-    state = { status: 'not-found' };
-  } else if (isPending || isFetching) {
-    state = { status: 'loading' };
-  } else {
-    state = { status: 'error', message: toErrorMessage(error) };
-  }
-
-  return { state, reload: refetch };
+  return activity === undefined ? { status: 'not-found' } : { status: 'ready', activity };
 }

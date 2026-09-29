@@ -22,11 +22,10 @@ import { StatusView } from '@/components/StatusView';
 
 interface ActivityScreenProps {
   state: ActivityState;
-  onRetry: () => void;
   onOpenUrl: (url: string) => void | Promise<void>;
 }
 
-export function ActivityScreen({ state, onRetry, onOpenUrl }: ActivityScreenProps) {
+export function ActivityScreen({ state, onOpenUrl }: ActivityScreenProps) {
   const theme = useTheme();
 
   if (state.status !== 'ready') {
@@ -36,11 +35,7 @@ export function ActivityScreen({ state, onRetry, onOpenUrl }: ActivityScreenProp
         edges={['bottom']}
       >
         <View style={styles.statusContent}>
-          <StatusView
-            kind={state.status}
-            message={state.status === 'error' ? state.message : undefined}
-            onRetry={state.status === 'error' ? onRetry : undefined}
-          />
+          <StatusView kind="not-found" />
         </View>
       </SafeAreaView>
     );

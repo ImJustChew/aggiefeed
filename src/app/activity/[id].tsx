@@ -7,10 +7,10 @@ import { useActivity } from '@/hooks/useActivities';
 
 export default function ActivityRoute() {
   const params = useLocalSearchParams<{ id: string }>();
-  const { state, reload } = useActivity(params.id);
+  const state = useActivity(params.id);
   const openUrl = useCallback((url: string): void => {
     void WebBrowser.openBrowserAsync(url).catch(() => undefined);
   }, []);
 
-  return <ActivityScreen state={state} onRetry={reload} onOpenUrl={openUrl} />;
+  return <ActivityScreen state={state} onOpenUrl={openUrl} />;
 }
