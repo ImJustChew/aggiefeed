@@ -517,88 +517,73 @@ describe('activity hooks', () => {
       wrapper: wrapper(queryClient),
     });
 
-    expect(result.current.state).toEqual({ status: 'ready', activity: cachedActivity });
+    expect(result.current).toEqual({ status: 'ready', activity: cachedActivity });
     expect(mockedFetchActivities).not.toHaveBeenCalled();
   });
 
-  it('fetches the default page when cached queries do not contain the requested id', async () => {
-    const cachedActivity = activity('cached-result');
-    const fetchedActivity = activity('fetched-result');
-    setActivities(queryClient, '', [[cachedActivity]]);
-    mockedFetchActivities.mockResolvedValueOnce([fetchedActivity]);
+  it('keeps showing a later-page activity after the stale window', async () => {
+    queryClient.setQueryDefaults(['activities'], { gcTime: Infinity });
+    const cachedActivity = activity('activity-30');
+    setActivities(queryClient, '', [page(0), page(25)]);
 
-    const { result } = await renderHook(() => useActivity('fetched-result'), {
-      wrapper: wrapper(queryClient),
-    });
+    jest.useFakeTimers();
+    try {
+      const firstRender = await renderHook(() => useActivity(cachedActivity.id), {
+        wrapper: wrapper(queryClient),
+      });
 
-    await waitFor(() =>
-      expect(result.current.state).toEqual({ status: 'ready', activity: fetchedActivity }),
-    );
-    expect(mockedFetchActivities).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, limit: 25, query: '' }),
-    );
+      expect(firstRender.result.current).toEqual({ status: 'ready', activity: cachedActivity });
+
+      await act(() => {
+        jest.advanceTimersByTime(31_000);
+      });
+      await firstRender.unmount();
+
+      const reopened = await renderHook(() => useActivity(cachedActivity.id), {
+        wrapper: wrapper(queryClient),
+      });
+
+      try {
+        expect(reopened.result.current).toEqual({ status: 'ready', activity: cachedActivity });
+        expect(mockedFetchActivities).not.toHaveBeenCalled();
+      } finally {
+        await reopened.unmount();
+      }
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
-  it('fetches the default first page on a cold detail cache and reports unknown ids', async () => {
-    let resolveFeed: (activities: Activity[]) => void = () => undefined;
-    const feedPromise = new Promise<Activity[]>((resolve) => {
-      resolveFeed = resolve;
-    });
-    mockedFetchActivities.mockReturnValue(feedPromise);
+  it('reports not-found without fetching when the feed cache lacks the id', async () => {
+    queryClient.setQueryDefaults(['activities'], { gcTime: Infinity });
+    setActivities(queryClient, '', [[activity('known')]]);
 
     const { result } = await renderHook(() => useActivity('missing'), {
       wrapper: wrapper(queryClient),
     });
 
-    expect(result.current.state).toEqual({ status: 'loading' });
-    await act(async () => {
-      resolveFeed([activity('known')]);
-      await feedPromise;
-    });
-    await waitFor(() => expect(result.current.state).toEqual({ status: 'not-found' }));
-    expect(mockedFetchActivities).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, limit: 25, query: '' }),
-    );
+    expect(result.current).toEqual({ status: 'not-found' });
+    expect(mockedFetchActivities).not.toHaveBeenCalled();
   });
 
-  it('shows the detail error and loading state while retrying', async () => {
-    mockedFetchActivities.mockRejectedValueOnce(new FeedRequestError(503));
+  it('updates when the feed cache receives the activity', async () => {
+    queryClient.setQueryDefaults(['activities'], { gcTime: Infinity });
+    setActivities(queryClient, '', [[]]);
 
-    const { result } = await renderHook(() => useActivity('missing'), {
+    const { result } = await renderHook(() => useActivity('new-activity'), {
       wrapper: wrapper(queryClient),
     });
 
-    await waitFor(() =>
-      expect(result.current.state).toEqual({
-        status: 'error',
-        message: "We couldn't load the feed (HTTP 503).",
-      }),
-    );
+    expect(result.current).toEqual({ status: 'not-found' });
 
-    let resolveRetry: (activities: Activity[]) => void = () => undefined;
-    const retryPromise = new Promise<Activity[]>((resolve) => {
-      resolveRetry = resolve;
-    });
-    mockedFetchActivities.mockReturnValueOnce(retryPromise);
-
-    let reload: ReturnType<typeof result.current.reload> | undefined;
-    await act(async () => {
-      reload = result.current.reload();
-      await Promise.resolve();
+    await act(() => {
+      setActivities(queryClient, '', [[activity('new-activity')]]);
     });
 
-    await waitFor(() => expect(result.current.state).toEqual({ status: 'loading' }));
-
-    await act(async () => {
-      resolveRetry([activity('missing')]);
-      await reload;
+    expect(result.current).toEqual({
+      status: 'ready',
+      activity: activity('new-activity'),
     });
-
-    await waitFor(() =>
-      expect(result.current.state).toEqual({
-        status: 'ready',
-        activity: activity('missing'),
-      }),
-    );
+    expect(mockedFetchActivities).not.toHaveBeenCalled();
   });
 });

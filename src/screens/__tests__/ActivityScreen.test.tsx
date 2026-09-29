@@ -22,8 +22,8 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
   };
 }
 
-function renderActivity(state: ActivityState, onOpenUrl = jest.fn(), onRetry = jest.fn()) {
-  return render(<ActivityScreen state={state} onRetry={onRetry} onOpenUrl={onOpenUrl} />);
+function renderActivity(state: ActivityState, onOpenUrl = jest.fn()) {
+  return render(<ActivityScreen state={state} onOpenUrl={onOpenUrl} />);
 }
 
 describe('ActivityScreen', () => {
@@ -39,25 +39,6 @@ describe('ActivityScreen', () => {
     expect(screen.getAllByText('Fri, Sep 25, 2026 · 12:00 PM')[0]).toBeOnTheScreen();
     expect(screen.getByText('Source')).toBeOnTheScreen();
     expect(screen.getByText('Type')).toBeOnTheScreen();
-  });
-
-  it('shows a loading state while the activity is being fetched', async () => {
-    await renderActivity({ status: 'loading' });
-
-    expect(screen.getByRole('progressbar')).toBeOnTheScreen();
-    expect(screen.getByText('Loading stories')).toBeOnTheScreen();
-  });
-
-  it('shows an error and retries when the activity fetch fails', async () => {
-    const onRetry = jest.fn();
-    await renderActivity({ status: 'error', message: 'Network unavailable.' }, jest.fn(), onRetry);
-
-    expect(screen.getByText('Network unavailable.')).toBeOnTheScreen();
-
-    const user = userEvent.setup();
-    await user.press(screen.getByRole('button', { name: 'Retry' }));
-
-    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   it('shows When and Where details for an event', async () => {
