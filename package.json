@@ -6,24 +6,29 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@tanstack/react-query": "^5.103.2",
-    "expo": "~57.0.25",
-    "expo-constants": "~57.0.19",
+    "expo": "~57.0.31",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.22",
     "expo-font": "~57.0.4",
-    "expo-linking": "~57.0.11",
-    "expo-router": "~57.0.23",
-    "expo-splash-screen": "~57.0.9",
+    "expo-linking": "~57.0.13",
+    "expo-router": "~57.0.29",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-maps": "1.27.2",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "supercluster": "^9.1.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.0.1",
@@ -34,7 +39,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "jest": "~29.7.0",
-    "jest-expo": "~57.0.5",
+    "jest-expo": "~57.0.6",
     "knip": "^6.38.0",
     "prettier": "^3.9.9",
     "test-renderer": "1.2",
@@ -42,15 +47,14 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "knip": "knip",
     "check": "bun run typecheck && bun run lint && bun run knip && bun run test"
   },
   "private": true,
@@ -65,6 +69,10 @@
       "^@/(.*)$": "<rootDir>/src/$1"
     },
     "clearMocks": true,
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|supercluster|kdbush))",
+      "/node_modules/react-native-reanimated/plugin/"
+    ],
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/.expo/"

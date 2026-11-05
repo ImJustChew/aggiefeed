@@ -26,11 +26,17 @@ export interface FeedSearch {
 
 interface FeedSearchRowProps {
   collapseDistance: SharedValue<number>;
+  onPressLocations?: () => void;
   search: FeedSearch;
   scrollY: SharedValue<number>;
 }
 
-export function FeedSearchRow({ collapseDistance, search, scrollY }: FeedSearchRowProps) {
+export function FeedSearchRow({
+  collapseDistance,
+  onPressLocations,
+  search,
+  scrollY,
+}: FeedSearchRowProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
@@ -94,6 +100,17 @@ export function FeedSearchRow({ collapseDistance, search, scrollY }: FeedSearchR
         <Animated.View testID="feed-header-title" style={[styles.titleSlot, titleScaleStyle]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>AggieFeed</Text>
         </Animated.View>
+        {onPressLocations ? (
+          <Pressable
+            accessibilityLabel="Browse locations"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={onPressLocations}
+            style={styles.iconButton}
+          >
+            <Ionicons color={theme.colors.text} name="location-outline" size={22} />
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityLabel="Search stories"
           accessibilityRole="button"

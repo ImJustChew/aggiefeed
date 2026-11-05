@@ -15,6 +15,7 @@ interface FeedPinnedHeaderProps {
   date?: Date;
   filter: ActivityFilter;
   insetsTop: number;
+  onPressLocations?: () => void;
   search: FeedSearch;
   onFilterChange: (filter: ActivityFilter) => void;
 }
@@ -24,6 +25,7 @@ export function FeedPinnedHeader({
   date,
   filter,
   insetsTop,
+  onPressLocations,
   search,
   onFilterChange,
 }: FeedPinnedHeaderProps) {
@@ -60,6 +62,7 @@ export function FeedPinnedHeader({
             collapseDistance={collapseDistance}
             date={date}
             onRowLayout={handleWordmarkRowLayout}
+            onPressLocations={onPressLocations}
             search={search}
             scrollY={scrollY}
           />

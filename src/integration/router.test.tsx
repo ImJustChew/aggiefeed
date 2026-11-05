@@ -8,10 +8,14 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from '@testing-library/react-native';
 
 import { ACTIVITY_PAGE_SIZE, FeedRequestError, fetchActivities } from '@/api/aggieFeed';
 import type { Activity } from '@/domain/activity';
+import { fetchLocations } from '@/api/locations';
+import { locationsFixture } from '@/domain/fixtures/locations.fixture';
+import { parseLocations } from '@/domain/parseLocations';
 import type { QueryClient } from '@tanstack/react-query';
 
 let mockAppQueryClient: QueryClient | undefined;
@@ -22,6 +26,15 @@ jest.mock('@/api/aggieFeed', () => {
   return {
     ...actual,
     fetchActivities: jest.fn(),
+  };
+});
+
+jest.mock('@/api/locations', () => {
+  const actual = jest.requireActual<typeof import('@/api/locations')>('@/api/locations');
+
+  return {
+    ...actual,
+    fetchLocations: jest.fn(),
   };
 });
 
@@ -38,6 +51,8 @@ jest.mock('@/lib/queryClient', () => {
 });
 
 const mockedFetchActivities = jest.mocked(fetchActivities);
+const mockedFetchLocations = jest.mocked(fetchLocations);
+const locationsDirectory = parseLocations(locationsFixture);
 
 const routeActivity: Activity = {
   id: 'route-story',
@@ -97,6 +112,7 @@ describe('Expo Router activity flows', () => {
     mockAppQueryClient?.clear();
     jest.useRealTimers();
     mockedFetchActivities.mockReset();
+    mockedFetchLocations.mockReset();
   });
 
   it('navigates from the list to a four-field detail view and back', async () => {
@@ -117,6 +133,50 @@ describe('Expo Router activity flows', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Route story. Route source' })).toBeOnTheScreen(),
     );
+  });
+
+  it('opens the location directory from the feed header', async () => {
+    mockedFetchActivities.mockResolvedValue([routeActivity]);
+    mockedFetchLocations.mockResolvedValue(locationsDirectory);
+
+    await renderRoutes();
+    await screen.findByRole('button', { name: 'Route story. Route source' });
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Browse locations' }));
+
+    expect(await screen.findByTestId('locations-list')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /Gateway Parking Structure/ })).toBeOnTheScreen();
+  });
+
+  it('returns from the location directory to the feed with its back button', async () => {
+    mockedFetchActivities.mockResolvedValue([routeActivity]);
+    mockedFetchLocations.mockResolvedValue(locationsDirectory);
+
+    await renderRoutes();
+    await screen.findByRole('button', { name: 'Route story. Route source' });
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Browse locations' }));
+
+    expect(await screen.findByTestId('locations-list')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Back' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Route story. Route source' }),
+    ).toBeOnTheScreen();
+  });
+
+  it('replaces a cold-linked location route with the feed when Back is pressed', async () => {
+    mockedFetchActivities.mockResolvedValue([routeActivity]);
+    mockedFetchLocations.mockResolvedValue(locationsDirectory);
+
+    await renderRoutes('/locations');
+    expect(await screen.findByTestId('locations-list')).toBeOnTheScreen();
+    await userEvent.setup().press(screen.getByRole('button', { name: 'Back' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Route story. Route source' }),
+    ).toBeOnTheScreen();
   });
 
   it('reopens a later-page activity after the stale window', async () => {
@@ -239,5 +299,18 @@ describe('Expo Router activity flows', () => {
     await renderRoutes('/activity/unknown');
 
     expect(await screen.findByText('Activity not found')).toBeOnTheScreen();
+  });
+
+  it('loads and selects a location from a cold query deep link', async () => {
+    mockedFetchLocations.mockResolvedValue(locationsDirectory);
+
+    await renderRoutes('/locations?selected=parking:30');
+
+    expect(await screen.findByTestId('selected-location-card')).toBeOnTheScreen();
+    expect(
+      within(screen.getByTestId('selected-location-card')).getByText('Gateway Parking Structure'),
+    ).toBeOnTheScreen();
+    expect(screen.getByTestId('locations-map')).toBeOnTheScreen();
+    expect(mockedFetchLocations).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
   });
 });

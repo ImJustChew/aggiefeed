@@ -12,6 +12,7 @@ import { FeedSearchRow, type FeedSearch } from './FeedSearchRow';
 
 interface FeedHeaderProps {
   date?: Date;
+  onPressLocations?: () => void;
   search: FeedSearch;
   scrollY: SharedValue<number>;
   collapseDistance: SharedValue<number>;
@@ -20,6 +21,7 @@ interface FeedHeaderProps {
 
 export function FeedHeader({
   date = new Date(),
+  onPressLocations,
   search,
   scrollY,
   collapseDistance,
@@ -73,7 +75,12 @@ export function FeedHeader({
         }
         style={[styles.wordmarkRow, rowStyle]}
       >
-        <FeedSearchRow collapseDistance={collapseDistance} search={search} scrollY={scrollY} />
+        <FeedSearchRow
+          collapseDistance={collapseDistance}
+          onPressLocations={onPressLocations}
+          search={search}
+          scrollY={scrollY}
+        />
       </Animated.View>
     </AnimatedReveal>
   );

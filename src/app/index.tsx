@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { BackHandler } from 'react-native';
 
@@ -50,6 +50,9 @@ export default function FeedRoute() {
   const onPressActivity = useCallback((id: string) => {
     router.push({ pathname: '/activity/[id]', params: { id } });
   }, []);
+  const onPressLocations = useCallback(() => {
+    router.push('/locations');
+  }, []);
   const search = useMemo(
     () => ({
       query,
@@ -68,16 +71,20 @@ export default function FeedRoute() {
   );
 
   return (
-    <FeedScreen
-      state={state}
-      filter={filter}
-      onFilterChange={setFilter}
-      isRefreshing={isRefreshing}
-      onRefresh={reload}
-      onShowAll={showAll}
-      onPressActivity={onPressActivity}
-      search={search}
-      pagination={pagination}
-    />
+    <>
+      <Stack.Screen options={{ title: 'Feed' }} />
+      <FeedScreen
+        state={state}
+        filter={filter}
+        onFilterChange={setFilter}
+        isRefreshing={isRefreshing}
+        onRefresh={reload}
+        onShowAll={showAll}
+        onPressActivity={onPressActivity}
+        onPressLocations={onPressLocations}
+        search={search}
+        pagination={pagination}
+      />
+    </>
   );
 }

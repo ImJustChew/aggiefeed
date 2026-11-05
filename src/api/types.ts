@@ -24,3 +24,35 @@ export interface ApiActivity {
     };
   };
 }
+
+/**
+ * The locations feed is untrusted JSON. Properties are optional here so the
+ * parser can validate the response at runtime instead of trusting the API.
+ */
+export interface ApiLocationCategory {
+  id?: string;
+  name?: string;
+  subcategories?: { id?: string; name?: string }[];
+}
+
+export interface ApiLocation {
+  id?: string;
+  kind?: 'building' | 'poi' | 'parking';
+  name?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  groupName?: string;
+  campus?: string;
+  lat?: number | null;
+  lng?: number | null;
+  description?: string;
+  url?: string;
+  imageUrl?: string;
+  buildingId?: string;
+  caan?: string;
+  departments?: string[];
+  permits?: string[];
+  aliases?: string[];
+  tags?: string[];
+  searchable?: boolean;
+}

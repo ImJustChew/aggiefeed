@@ -29,6 +29,7 @@ interface FeedScreenProps {
   onRefresh: () => void;
   onShowAll: () => void;
   onPressActivity: (id: string) => void;
+  onPressLocations?: () => void;
   search: FeedSearch;
   pagination: FeedPagination;
 }
@@ -41,6 +42,7 @@ export function FeedScreen({
   onRefresh,
   onShowAll,
   onPressActivity,
+  onPressLocations,
   search,
   pagination,
 }: FeedScreenProps) {
@@ -139,6 +141,7 @@ export function FeedScreen({
         date={fetchedAt}
         filter={filter}
         insetsTop={insets.top}
+        onPressLocations={onPressLocations}
         onFilterChange={onFilterChange}
         search={search}
       />

@@ -11,7 +11,11 @@ import Animated, {
 
 import { useTheme } from '@/theme';
 
-export function LoadingSkeleton() {
+interface LoadingSkeletonProps {
+  accessibilityLabel?: string;
+}
+
+export function LoadingSkeleton({ accessibilityLabel = 'Loading stories' }: LoadingSkeletonProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const opacity = useSharedValue(reducedMotion ? 0.7 : 0.45);
@@ -30,7 +34,7 @@ export function LoadingSkeleton() {
   }, [opacity, reducedMotion]);
 
   return (
-    <View style={styles.container} accessible accessibilityLabel="Loading stories">
+    <View style={styles.container} accessible accessibilityLabel={accessibilityLabel}>
       {[0, 1, 2].map((item) => (
         <Animated.View key={item} style={[styles.item, animatedStyle]}>
           <View style={[styles.kicker, { backgroundColor: theme.colors.hairline }]} />

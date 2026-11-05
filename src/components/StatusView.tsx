@@ -41,7 +41,7 @@ export function StatusView({ kind, title, message, actions, onRetry }: StatusVie
 
   return (
     <View style={styles.container}>
-      {isLoading ? <LoadingSkeleton /> : null}
+      {isLoading ? <LoadingSkeleton accessibilityLabel={displayTitle} /> : null}
       <View
         accessible
         accessibilityRole={isLoading ? 'progressbar' : 'alert'}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
   Inter_400Regular,
@@ -69,24 +70,37 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: theme.colors.background },
-              headerStyle: { backgroundColor: theme.colors.background },
-              headerTintColor: theme.colors.accent,
-              headerTitleStyle: { color: theme.colors.text, fontFamily: fonts.semibold },
-              headerShadowVisible: false,
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="activity/[id]" options={{ title: '' }} />
-          </Stack>
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: theme.colors.background },
+                headerStyle: { backgroundColor: theme.colors.background },
+                headerTintColor: theme.colors.accent,
+                headerTitleStyle: { color: theme.colors.text, fontFamily: fonts.semibold },
+                headerShadowVisible: false,
+              }}
+            >
+              <Stack.Screen name="index" options={{ headerShown: false, title: 'Feed' }} />
+              <Stack.Screen
+                name="activity/[id]"
+                options={{
+                  headerBackButtonDisplayMode: 'default',
+                  headerBackTitle: 'Feed',
+                  title: '',
+                }}
+              />
+              <Stack.Screen
+                name="locations/index"
+                options={{ headerBackTitle: 'Feed', headerShown: false, title: 'Locations' }}
+              />
+            </Stack>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
