@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -22,6 +22,9 @@ import {
 } from 'expo-router';
 
 import { createQueryClient } from '@/lib/queryClient';
+import { useDatabaseMigrations } from '@/db/useDatabaseMigrations';
+import { markCacheReady, pruneApiCache } from '@/db/apiCacheStorage';
+import { DrizzleStudio } from '@/components/DrizzleStudio';
 import { fonts, useTheme } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -31,6 +34,8 @@ const queryClient = createQueryClient();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const theme = useTheme();
+  const { success: migrationsSucceeded, error: migrationError } = useDatabaseMigrations();
+  const cachePruneStarted = useRef(false);
   const [fontsLoaded, fontError] = useFonts({
     [fonts.regular]: Inter_400Regular,
     [fonts.medium]: Inter_500Medium,
@@ -40,9 +45,35 @@ export default function RootLayout() {
     [fonts.serifBold]: Newsreader_700Bold,
   });
 
+  const fontsReady = fontsLoaded || fontError !== null;
+  const migrationsSettled = migrationsSucceeded || migrationError !== undefined;
+  // Mark synchronously: child screens' query effects run before this component's effects.
+  if (migrationsSucceeded) markCacheReady();
+
   useEffect(() => {
-    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
-  }, [fontError, fontsLoaded]);
+    if (migrationError) {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console -- offline storage is best-effort; report failures in development.
+        console.warn('Database migrations failed; offline cache is disabled.', migrationError);
+      }
+      return;
+    }
+
+    if (!migrationsSucceeded) return;
+
+    if (cachePruneStarted.current) return;
+    cachePruneStarted.current = true;
+    void pruneApiCache().catch((error: unknown) => {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console -- cache maintenance is diagnostic-only in development.
+        console.warn('API cache pruning failed.', error);
+      }
+    });
+  }, [migrationError, migrationsSucceeded]);
+
+  useEffect(() => {
+    if (fontsReady && migrationsSettled) void SplashScreen.hideAsync();
+  }, [fontsReady, migrationsSettled]);
 
   const navigationTheme = useMemo<Theme>(() => {
     const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -67,7 +98,7 @@ export default function RootLayout() {
     };
   }, [colorScheme, theme.colors]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsReady || !migrationsSettled) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -75,29 +106,31 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
             <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <Stack
-              screenOptions={{
-                contentStyle: { backgroundColor: theme.colors.background },
-                headerStyle: { backgroundColor: theme.colors.background },
-                headerTintColor: theme.colors.accent,
-                headerTitleStyle: { color: theme.colors.text, fontFamily: fonts.semibold },
-                headerShadowVisible: false,
-              }}
-            >
-              <Stack.Screen name="index" options={{ headerShown: false, title: 'Feed' }} />
-              <Stack.Screen
-                name="activity/[id]"
-                options={{
-                  headerBackButtonDisplayMode: 'default',
-                  headerBackTitle: 'Feed',
-                  title: '',
+            <DrizzleStudio>
+              <Stack
+                screenOptions={{
+                  contentStyle: { backgroundColor: theme.colors.background },
+                  headerStyle: { backgroundColor: theme.colors.background },
+                  headerTintColor: theme.colors.accent,
+                  headerTitleStyle: { color: theme.colors.text, fontFamily: fonts.semibold },
+                  headerShadowVisible: false,
                 }}
-              />
-              <Stack.Screen
-                name="locations/index"
-                options={{ headerBackTitle: 'Feed', headerShown: false, title: 'Locations' }}
-              />
-            </Stack>
+              >
+                <Stack.Screen name="index" options={{ headerShown: false, title: 'Feed' }} />
+                <Stack.Screen
+                  name="activity/[id]"
+                  options={{
+                    headerBackButtonDisplayMode: 'default',
+                    headerBackTitle: 'Feed',
+                    title: '',
+                  }}
+                />
+                <Stack.Screen
+                  name="locations/index"
+                  options={{ headerBackTitle: 'Feed', headerShown: false, title: 'Locations' }}
+                />
+              </Stack>
+            </DrizzleStudio>
           </SafeAreaProvider>
         </QueryClientProvider>
       </ThemeProvider>

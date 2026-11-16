@@ -1,3 +1,5 @@
+import { LOCATIONS_CACHE_KEY, LOCATIONS_CACHE_TTL_MS } from '@/constants/db';
+import { getCachedOrFetch } from '@/db/apiCache';
 import type { LocationDirectory } from '@/domain/location';
 import { parseLocations } from '@/domain/parseLocations';
 
@@ -17,13 +19,21 @@ export class LocationsRequestError extends Error {
 export async function fetchLocations({
   signal,
 }: FetchLocationsOptions = {}): Promise<LocationDirectory> {
-  const response = await fetch(LOCATIONS_URL, {
+  return getCachedOrFetch({
+    key: LOCATIONS_CACHE_KEY,
+    policy: 'cache-first',
+    ttlMs: LOCATIONS_CACHE_TTL_MS,
     signal,
-    headers: { Accept: 'application/json' },
+    parse: parseLocations,
+    fetcher: async () => {
+      const response = await fetch(LOCATIONS_URL, {
+        signal,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) throw new LocationsRequestError(response.status);
+
+      return (await response.json()) as unknown;
+    },
   });
-
-  if (!response.ok) throw new LocationsRequestError(response.status);
-
-  const payload: unknown = await response.json();
-  return parseLocations(payload);
 }

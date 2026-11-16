@@ -31,6 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    'expo-sqlite',
     [
       'expo-build-properties',
       {
@@ -60,6 +61,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   scheme: 'aggiefeed',
+  extra: {
+    ...config.extra,
+    eas: {
+      ...config.extra?.eas,
+      projectId: 'b57e9949-f475-4cfb-b299-5637d9ff046a',
+    },
+  },
   experiments: {
     ...config.experiments,
     typedRoutes: true,

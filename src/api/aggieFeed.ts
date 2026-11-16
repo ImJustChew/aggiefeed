@@ -1,3 +1,4 @@
+import { getCachedOrFetch } from '@/db/apiCache';
 import type { Activity } from '@/domain/activity';
 import { parseActivities } from '@/domain/parseActivities';
 
@@ -27,16 +28,23 @@ export async function fetchActivities({
   signal,
 }: FetchActivitiesOptions = {}): Promise<Activity[]> {
   const params = new URLSearchParams({ s: String(skip), l: String(limit) });
-  const trimmedQuery = query?.trim();
-  if (trimmedQuery) params.set('q', trimmedQuery);
+  const normalizedQuery = query?.trim() ?? '';
+  if (normalizedQuery) params.set('q', normalizedQuery);
 
-  const response = await fetch(`${FEED_URL}?${params.toString()}`, {
+  return getCachedOrFetch({
+    key: `activities:v1:${JSON.stringify([skip, limit, normalizedQuery])}`,
+    policy: 'network-first',
     signal,
-    headers: { Accept: 'application/json' },
+    parse: (payload) => parseActivities(payload, skip),
+    fetcher: async () => {
+      const response = await fetch(`${FEED_URL}?${params.toString()}`, {
+        signal,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) throw new FeedRequestError(response.status);
+
+      return (await response.json()) as unknown;
+    },
   });
-
-  if (!response.ok) throw new FeedRequestError(response.status);
-
-  const payload: unknown = await response.json();
-  return parseActivities(payload, skip);
 }

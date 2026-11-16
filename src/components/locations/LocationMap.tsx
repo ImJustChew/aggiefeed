@@ -8,13 +8,7 @@ import {
   useState,
 } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import MapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-  type EdgePadding,
-  type MapMarker,
-  type Region,
-} from 'react-native-maps';
+import MapView, { Marker, type EdgePadding, type MapMarker, type Region } from 'react-native-maps';
 import Supercluster from 'supercluster';
 
 import {
@@ -178,7 +172,7 @@ export const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>(funct
 
   const handleRegionChange = useCallback(
     (nextRegion: Region) => {
-      // Keep clusters responsive; iOS Google/Fabric may skip onRegionChangeComplete after gestures.
+      // Keep clusters responsive during gestures on either platform.
       latestRegion.current = nextRegion;
       const nextZoomLevel = Math.floor(zoomForRegion(nextRegion, mapWidth));
       const movedLatitude =
@@ -243,7 +237,6 @@ export const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>(funct
       onLayout={handleLayout}
       onRegionChange={handleRegionChange}
       onRegionChangeComplete={handleRegionChangeComplete}
-      provider={PROVIDER_GOOGLE}
       ref={mapRef}
       scrollEnabled
       style={styles.map}

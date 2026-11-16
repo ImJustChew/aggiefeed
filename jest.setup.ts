@@ -2,6 +2,29 @@ import { setUpTests } from 'react-native-reanimated';
 
 setUpTests();
 
+// Keep API tests independent of device SQLite state and native migration startup.
+jest.mock('@/db/apiCacheStorage', () => ({
+  __esModule: true,
+  apiCacheStorage: {
+    get: jest.fn(async () => undefined),
+    set: jest.fn(async () => undefined),
+  },
+  markCacheReady: jest.fn(),
+  pruneApiCache: jest.fn(async () => undefined),
+}));
+
+jest.mock('@/db/useDatabaseMigrations', () => ({
+  useDatabaseMigrations: () => ({ success: true, error: undefined }),
+}));
+
+jest.mock('@/components/DrizzleStudio', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    DrizzleStudio: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(React.Fragment, null, children),
+  };
+});
+
 jest.mock('react-native-maps', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   const { View } = jest.requireActual<typeof import('react-native')>('react-native');
